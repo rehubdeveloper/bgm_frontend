@@ -114,16 +114,16 @@ export default function LandingPage() {
             </nav>
 
             {/* CTA Button */}
-            <button className="btn-primary text-sm">Watch Live</button>
+            <button className="btn-primary text-sm px-4 md:px-6">Watch Live</button>
           </div>
         </div>
       </header>
 
       {/* Hero Section */}
-      <section className="relative pt-28 pb-12 px-4 sm:px-6 lg:px-8">
+      <section className="relative pt-20 pb-8 px-3 sm:px-6 lg:px-8">
         <div className="max-w-6xl mx-auto">
           {/* Main Hero Carousel */}
-          <div className="relative h-96 md:h-[500px] rounded-3xl overflow-hidden group">
+          <div className="relative h-[450px] sm:h-96 md:h-[500px] rounded-2xl sm:rounded-3xl overflow-hidden group">
             {/* Images */}
             {slides.map((slide, idx) => (
               <div
@@ -136,39 +136,36 @@ export default function LandingPage() {
                   alt={slide.title}
                   className="w-full h-full object-cover"
                 />
-                <div className="absolute inset-0 bg-black/40" />
+                <div className="absolute inset-0 bg-black/50" />
               </div>
             ))}
 
             {/* Content Overlay */}
-            <div className="relative h-full flex flex-col items-center justify-center text-center text-white px-6 z-10">
-              <div className="space-y-6">
-                <div className="inline-block glass-strong px-4 py-2 rounded-2xl">
-                  <p className="text-sm font-semibold text-primary">Welcome to BGM</p>
-                </div>
-                <h1 className="text-4xl md:text-6xl lg:text-7xl font-display font-bold text-balance leading-tight">
+            <div className="relative h-full flex flex-col items-center justify-center text-center text-white px-4 sm:px-6 z-10">
+              <div className="space-y-3 sm:space-y-4 md:space-y-6 max-w-4xl">
+                <h1 className="text-2xl sm:text-4xl md:text-6xl lg:text-7xl font-display font-bold text-balance leading-tight px-2">
                   {slides[currentSlide].title}
                 </h1>
-                <p className="text-lg md:text-2xl text-white/90 max-w-2xl mx-auto font-body">
+                <p className="text-sm sm:text-lg md:text-2xl text-white/90 max-w-2xl mx-auto font-body px-2">
                   {slides[currentSlide].subtitle}
                 </p>
-                <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
-                  <button className="btn-primary">
+                <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center pt-2 sm:pt-4 px-4">
+                  <button className="btn-primary text-sm sm:text-base py-2.5 sm:py-3">
                     {slides[currentSlide].cta}
-                    <ArrowRight className="w-4 h-4 ml-2 inline" />
+                    <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 ml-2 inline" />
                   </button>
-                  <button className="btn-outline text-white border-white/40 hover:bg-white/10">Learn More</button>
+                  <button className="btn-outline text-white border-white/40 hover:bg-white/10 text-sm sm:text-base py-2.5 sm:py-3">Learn More</button>
                 </div>
               </div>
             </div>
 
             {/* Carousel Controls */}
-            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-2 z-20">
+            <div className="absolute bottom-4 sm:bottom-8 left-1/2 -translate-x-1/2 flex gap-2 z-20">
               {slides.map((_, idx) => (
                 <button
                   key={idx}
                   onClick={() => setCurrentSlide(idx)}
-                  className={`transition-all duration-300 rounded-full h-2 ${idx === currentSlide ? "bg-white w-8" : "bg-white/50 w-2 hover:bg-white/70"
+                  className={`transition-all duration-300 rounded-full h-1.5 sm:h-2 ${idx === currentSlide ? "bg-white w-6 sm:w-8" : "bg-white/50 w-1.5 sm:w-2 hover:bg-white/70"
                     }`}
                   aria-label={`Go to slide ${idx + 1}`}
                 />
@@ -177,7 +174,6 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
-
       <div
         className="fixed top-0 left-0 w-full h-full -z-10"
         style={{
@@ -268,7 +264,7 @@ export default function LandingPage() {
                 </p>
               </div>
 
-              <div className="grid grid-cols-3 gap-4 pt-4">
+              <div className="grid grid-cols-3 gap-3 md:gap-4 pt-4">
                 <div className="glass-card p-4 rounded-xl text-center">
                   <p className="text-2xl font-display font-bold text-primary">1000+</p>
                   <p className="text-sm text-muted-foreground font-body">Lives Transformed</p>
