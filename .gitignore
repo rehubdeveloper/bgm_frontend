@@ -1,0 +1,59 @@
+# -----------------------------------------------------------------------------
+# NEXT.JS & VERCEL
+# -----------------------------------------------------------------------------
+# Next.js build output directory
+.next/
+out/
+# Vercel deployment cache and config
+.vercel/
+vercel-output/
+
+# -----------------------------------------------------------------------------
+# DEPENDENCIES & PACKAGES
+# -----------------------------------------------------------------------------
+# Node dependencies
+/node_modules
+# Yarn and NPM lock files and caches
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+package-lock.json
+# Yarn V2+ files
+.yarn/cache
+.pnp.*
+
+# -----------------------------------------------------------------------------
+# BUILD & COMPILED FILES
+# -----------------------------------------------------------------------------
+# TypeScript compiler output
+*.tsbuildinfo
+# Compiled JavaScript files (usually generated in dist/ or build/ but can be anywhere)
+dist/
+build/
+coverage/
+
+# -----------------------------------------------------------------------------
+# ENVIRONMENT & SECRETS
+# -----------------------------------------------------------------------------
+# Environment variables file(s). **CRITICAL** to exclude secrets.
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+# Local secrets file
+.secrets/
+
+# -----------------------------------------------------------------------------
+# OS & IDE Files (Common)
+# -----------------------------------------------------------------------------
+# macOS
+.DS_Store
+# Windows thumbnail database
+Thumbs.db
+# VS Code
+.vscode/
+# JetBrains IDEs
+.idea/
