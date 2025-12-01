@@ -3,7 +3,7 @@
 import type React from "react"
 import { useState } from "react"
 import Link from "next/link"
-import { Menu, X, LogOut, Settings } from "lucide-react"
+import { Menu, X, LogOut, Settings, BarChart3, FileText, MessageSquare, Mic, BookOpen, Calendar, Heart, Users, Mail, Building, Tv } from "lucide-react"
 
 export default function AdminLayout({
   children,
@@ -13,17 +13,17 @@ export default function AdminLayout({
   const [sidebarOpen, setSidebarOpen] = useState(true)
 
   const menuItems = [
-    { label: "Dashboard", href: "/admin", icon: "📊" },
-    { label: "Content", href: "/admin/content", icon: "📝" },
-    { label: "Testimonies", href: "/admin/testimonies", icon: "💬" },
-    { label: "Sermons", href: "/admin/sermons", icon: "🎙️" },
-    { label: "Devotionals", href: "/admin/devotionals", icon: "📖" },
-    { label: "Events", href: "/admin/events", icon: "📅" },
-    { label: "Giving", href: "/admin/giving", icon: "💝" },
-    { label: "Members", href: "/admin/members", icon: "👥" },
-    { label: "Contact", href: "/admin/contact", icon: "📧" },
-    { label: "Branches", href: "/admin/branches", icon: "🏢" },
-    { label: "Live TV", href: "/admin/live-tv", icon: "📺" },
+    { label: "Dashboard", href: "/admin", icon: BarChart3 },
+    { label: "Content", href: "/admin/content", icon: FileText },
+    { label: "Testimonies", href: "/admin/testimonies", icon: MessageSquare },
+    { label: "Sermons", href: "/admin/sermons", icon: Mic },
+    { label: "Devotionals", href: "/admin/devotionals", icon: BookOpen },
+    { label: "Events", href: "/admin/events", icon: Calendar },
+    { label: "Giving", href: "/admin/giving", icon: Heart },
+    { label: "Members", href: "/admin/members", icon: Users },
+    { label: "Contact", href: "/admin/contact", icon: Mail },
+    { label: "Branches", href: "/admin/branches", icon: Building },
+    { label: "Live TV", href: "/admin/live-tv", icon: Tv },
   ]
 
   return (
@@ -44,7 +44,7 @@ export default function AdminLayout({
               href={item.href}
               className="flex items-center gap-3 px-4 py-3 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
             >
-              <span className="text-xl">{item.icon}</span>
+              <item.icon className="w-5 h-5" />
               <span className="font-medium">{item.label}</span>
             </Link>
           ))}
