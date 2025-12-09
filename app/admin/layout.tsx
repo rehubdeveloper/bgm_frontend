@@ -21,6 +21,7 @@ export default function AdminLayout({
     { label: "Events", href: "/admin/events", icon: Calendar },
     { label: "Giving", href: "/admin/giving", icon: Heart },
     { label: "Members", href: "/admin/members", icon: Users },
+    { label: "Departments", href: "/admin/departments", icon: Building },
     { label: "Contact", href: "/admin/contact", icon: Mail },
     { label: "Branches", href: "/admin/branches", icon: Building },
     { label: "Live TV", href: "/admin/live-tv", icon: Tv },

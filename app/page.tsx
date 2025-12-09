@@ -111,6 +111,13 @@ export default function LandingPage() {
                   <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-primary group-hover:w-full transition-all duration-300" />
                 </a>
               ))}
+              <a
+                href="/register"
+                className="text-sm font-body font-medium hover:text-primary transition-colors relative group"
+              >
+                Register
+                <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-primary group-hover:w-full transition-all duration-300" />
+              </a>
             </nav>
 
             {/* CTA Button */}
@@ -356,10 +363,10 @@ export default function LandingPage() {
               </div>
 
               <div className="flex flex-col sm:flex-row gap-4 flex-wrap">
-                <button className="btn-glass">
+                <a href="/register" className="btn-glass inline-flex items-center">
                   Join Our Community
                   <ArrowRight className="w-4 h-4 ml-2 inline" />
-                </button>
+                </a>
                 <button className="btn-outline text-blue-700 border-blue-700/40 hover:bg-blue-700/10">Explore Events</button>
               </div>
             </div>
