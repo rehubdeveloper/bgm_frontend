@@ -8,15 +8,8 @@ export async function GET(request: NextRequest) {
     console.log(`[${requestId}] 📍 Request URL: ${request.url}`);
     console.log(`[${requestId}] 📝 Request Method: ${request.method}`);
 
-    // Check for authorization header
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        console.log(`[${requestId}] ❌ No authorization header provided`);
-        return NextResponse.json(
-            { error: 'Authorization required' },
-            { status: 401 }
-        );
-    }
+    // Note: GET requests are allowed without authentication for registration purposes
+    // Only POST (creation) requires authentication
 
     try {
         // Forward the request to the external API
@@ -28,7 +21,6 @@ export async function GET(request: NextRequest) {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': authHeader,
             },
         });
 

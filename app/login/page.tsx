@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -19,6 +20,7 @@ type FormData = z.infer<typeof formSchema>
 
 export default function LoginPage() {
     const [isLoading, setIsLoading] = useState(false)
+    const router = useRouter()
 
     const form = useForm<FormData>({
         resolver: zodResolver(formSchema),
@@ -49,7 +51,8 @@ export default function LoginPage() {
                     localStorage.setItem('refresh_token', result.refresh)
                 }
                 form.reset()
-                // You might want to redirect to a dashboard or home page here
+                // Redirect to home page
+                router.push('/')
             } else {
                 toast.error(result.error || 'Login failed')
             }

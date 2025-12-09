@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -27,14 +28,12 @@ const formSchema = z.object({
 
 type FormData = z.infer<typeof formSchema>
 
-const departments = [
-    { value: '0', label: 'General' },
-    { value: '1', label: 'Youth Ministry' },
-    { value: '2', label: 'Worship Team' },
-    { value: '3', label: 'Children Ministry' },
-    { value: '4', label: 'Outreach' },
-    { value: '5', label: 'Administration' },
-]
+interface Department {
+    id: number;
+    name: string;
+    description?: string;
+    is_active?: boolean;
+}
 
 const maritalStatuses = [
     { value: 'single', label: 'Single' },
@@ -51,6 +50,33 @@ const genders = [
 
 export default function RegisterPage() {
     const [isLoading, setIsLoading] = useState(false)
+    const [departments, setDepartments] = useState<Department[]>([])
+    const [departmentsLoading, setDepartmentsLoading] = useState(true)
+    const router = useRouter()
+
+    useEffect(() => {
+        fetchDepartments()
+    }, [])
+
+    const fetchDepartments = async () => {
+        try {
+            const response = await fetch('/api/departments/')
+            if (response.ok) {
+                const data = await response.json()
+                // Handle paginated response format
+                const departmentsData = data.results || []
+                setDepartments(departmentsData)
+            } else {
+                console.error('Failed to fetch departments')
+                setDepartments([])
+            }
+        } catch (error) {
+            console.error('Error fetching departments:', error)
+            setDepartments([])
+        } finally {
+            setDepartmentsLoading(false)
+        }
+    }
 
     const form = useForm<FormData>({
         resolver: zodResolver(formSchema),
@@ -59,7 +85,7 @@ export default function RegisterPage() {
             last_name: '',
             email: '',
             phone: '',
-            department: '0',
+            department: '',
             date_of_birth: '',
             marital_status: 'single',
             gender: 'male',
@@ -84,13 +110,13 @@ export default function RegisterPage() {
             })
 
             if (response.ok) {
-                toast.success('Registration successful!')
+                toast.success('Registration successful! Please login to continue.')
                 form.reset({
                     first_name: '',
                     last_name: '',
                     email: '',
                     phone: '',
-                    department: '0',
+                    department: '',
                     date_of_birth: '',
                     marital_status: 'single',
                     gender: 'male',
@@ -98,6 +124,8 @@ export default function RegisterPage() {
                     address: '',
                     password: '',
                 })
+                // Redirect to login page
+                router.push('/login')
             } else {
                 const error = await response.json()
                 toast.error(error.error || 'Registration failed')
@@ -193,8 +221,8 @@ export default function RegisterPage() {
                                                 </FormControl>
                                                 <SelectContent>
                                                     {departments.map((dept) => (
-                                                        <SelectItem key={dept.value} value={dept.value}>
-                                                            {dept.label}
+                                                        <SelectItem key={dept.id} value={dept.id.toString()}>
+                                                            {dept.name}
                                                         </SelectItem>
                                                     ))}
                                                 </SelectContent>

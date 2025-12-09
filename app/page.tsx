@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { Sparkles, Users, BookOpen, Heart, MapPin, Phone, Mail, ArrowRight } from "lucide-react"
 import Image from "next/image"
+import Link from "next/link"
 
 export default function LandingPage() {
   const [currentSlide, setCurrentSlide] = useState(0)
@@ -112,16 +113,16 @@ export default function LandingPage() {
                 </a>
               ))}
               <a
-                href="/register"
+                href="#"
                 className="text-sm font-body font-medium hover:text-primary transition-colors relative group"
               >
-                Register
+                Watch Live
                 <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-primary group-hover:w-full transition-all duration-300" />
               </a>
             </nav>
 
             {/* CTA Button */}
-            <button className="btn-primary text-sm px-4 md:px-6">Watch Live</button>
+            <Link href="/register" className="btn-primary text-sm px-4 md:px-6">Register</Link>
           </div>
         </div>
       </header>
