@@ -1,3 +1,4 @@
+// @ts-ignore: 'next/server' types may not be available in this environment
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {

@@ -1,4 +1,5 @@
 import type React from "react"
+// @ts-ignore: 'next/server' types may not be available in this environment
 import type { Metadata } from "next"
 import { Geist_Mono, Plus_Jakarta_Sans, ADLaM_Display as Clash_Display } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
