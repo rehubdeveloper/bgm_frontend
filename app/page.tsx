@@ -1,12 +1,14 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Sparkles, Users, BookOpen, Heart, MapPin, Phone, Mail, ArrowRight } from "lucide-react"
+import { Sparkles, Users, BookOpen, Heart, MapPin, Phone, Mail, ArrowRight, LogOut } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 
 export default function LandingPage() {
   const [currentSlide, setCurrentSlide] = useState(0)
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [checkingAuth, setCheckingAuth] = useState(true)
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -14,6 +16,32 @@ export default function LandingPage() {
     }, 2500)
     return () => clearInterval(timer)
   }, [])
+
+  useEffect(() => {
+    // Check if user is logged in
+    const checkAuth = () => {
+      const token = localStorage.getItem('access_token')
+      setIsLoggedIn(!!token)
+      setCheckingAuth(false)
+    }
+
+    checkAuth()
+
+    // Listen for storage changes (login/logout events)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'access_token') {
+        setIsLoggedIn(!!e.newValue)
+      }
+    }
+
+    window.addEventListener('storage', handleStorageChange)
+    return () => window.removeEventListener('storage', handleStorageChange)
+  }, [])
+
+  const handleLogout = () => {
+    localStorage.removeItem('access_token')
+    setIsLoggedIn(false)
+  }
 
   const slides = [
     {
@@ -121,8 +149,38 @@ export default function LandingPage() {
               </a>
             </nav>
 
-            {/* CTA Button */}
-            <Link href="/register" className="btn-primary text-sm px-4 md:px-6">Register</Link>
+            {/* Auth Buttons */}
+            {!checkingAuth && (
+              <div className="flex items-center gap-2 md:gap-3">
+                {!isLoggedIn ? (
+                  <>
+                    <Link
+                      href="/login"
+                      className="btn-outline text-sm px-3 md:px-4 py-2 hover:bg-primary/10 transition-colors"
+                    >
+                      Login
+                    </Link>
+                    <Link href="/register" className="btn-primary text-sm px-4 md:px-6">
+                      Register
+                    </Link>
+                  </>
+                ) : (
+                  <div className="flex items-center gap-2 md:gap-3">
+                    <span className="text-sm text-muted-foreground hidden sm:block">
+                      Welcome back!
+                    </span>
+                    <button
+                      onClick={handleLogout}
+                      className="btn-outline text-sm px-3 md:px-4 py-2 hover:bg-red-50 hover:text-red-600 hover:border-red-300 transition-colors flex items-center gap-2"
+                      title="Logout"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      <span className="hidden md:inline">Logout</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </header>
