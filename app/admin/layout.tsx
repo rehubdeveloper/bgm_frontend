@@ -1,9 +1,11 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Menu, X, LogOut, Settings, BarChart3, FileText, MessageSquare, Mic, BookOpen, Calendar, Heart, Users, Mail, Building, Tv } from "lucide-react"
+import { Menu, X, LogOut, Settings, BarChart3, FileText, MessageSquare, Mic, BookOpen, Calendar, Heart, Users, Mail, Building, Tv, Shield } from "lucide-react"
+import { PinVerificationModal } from "./components/pin-verification-modal"
 
 export default function AdminLayout({
   children,
@@ -11,6 +13,28 @@ export default function AdminLayout({
   children: React.ReactNode
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [isPinModalOpen, setIsPinModalOpen] = useState(false)
+  const [isAuthorized, setIsAuthorized] = useState(false)
+  const router = useRouter()
+
+  useEffect(() => {
+    const accessToken = localStorage.getItem('access_token')
+
+    if (!accessToken) {
+      // No access token - redirect to login
+      router.replace('/login')
+      return
+    }
+
+    // Check if already authorized as admin
+    const adminAuthorized = localStorage.getItem('admin_authorized') === 'true'
+    if (adminAuthorized) {
+      setIsAuthorized(true)
+    } else {
+      // Show PIN verification modal
+      setIsPinModalOpen(true)
+    }
+  }, [router])
 
   const menuItems = [
     { label: "Dashboard", href: "/admin", icon: BarChart3 },
@@ -56,7 +80,15 @@ export default function AdminLayout({
             <Settings className="w-5 h-5" />
             <span className="font-medium">Settings</span>
           </button>
-          <button className="w-full flex items-center gap-3 px-4 py-2 rounded-lg text-destructive hover:bg-destructive/10 transition-colors">
+          <button
+            className="w-full flex items-center gap-3 px-4 py-2 rounded-lg text-destructive hover:bg-destructive/10 transition-colors"
+            onClick={() => {
+              localStorage.removeItem('access_token')
+              localStorage.removeItem('refresh_token')
+              localStorage.removeItem('admin_authorized')
+              router.replace('/login')
+            }}
+          >
             <LogOut className="w-5 h-5" />
             <span className="font-medium">Logout</span>
           </button>
@@ -86,9 +118,16 @@ export default function AdminLayout({
 
         {/* Page Content */}
         <div className="flex-1 overflow-auto">
-          <div className="p-8">{children}</div>
+          {isAuthorized && <div className="p-8">{children}</div>}
         </div>
       </div>
+
+      {/* PIN Verification Modal */}
+      <PinVerificationModal
+        isOpen={isPinModalOpen}
+        onClose={() => router.replace('/login')} // If they cancel, go back to login
+        onSuccess={() => setIsAuthorized(true)}
+      />
     </div>
   )
 }
