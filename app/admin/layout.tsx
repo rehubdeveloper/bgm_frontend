@@ -31,14 +31,14 @@ export default function AdminLayout({
     <div className="flex h-screen bg-background relative">
       {/* Sidebar Overlay */}
       <div
-        className={`fixed inset-y-0 left-0 w-64 bg-sidebar border-r border-sidebar-border transition-transform duration-300 overflow-y-auto z-10 lg:relative lg:transition-none lg:z-auto lg:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        className={`fixed inset-y-0 left-0 w-64 bg-sidebar border-r border-sidebar-border transition-transform duration-300 flex flex-col z-10 lg:relative lg:transition-none lg:z-auto lg:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"
           }`}
       >
         <div className="p-6 border-b border-sidebar-border">
           <h1 className="text-2xl font-display font-bold text-sidebar-foreground">BGM Admin</h1>
         </div>
 
-        <nav className="p-4 space-y-2">
+        <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
           {menuItems.map((item) => (
             <Link
               key={item.href}
@@ -51,7 +51,7 @@ export default function AdminLayout({
           ))}
         </nav>
 
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-sidebar-border space-y-2">
+        <div className="p-4 border-t border-sidebar-border space-y-2">
           <button className="w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent transition-colors">
             <Settings className="w-5 h-5" />
             <span className="font-medium">Settings</span>

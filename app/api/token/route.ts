@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
         // Forward the request to the external API
         console.log('Sending login request to external API:', { email: body.email });
 
-        const response = await fetch('https://jfgg9t4b-8000.uks1.devtunnels.ms/api/token/', {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/token/`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

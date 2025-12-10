@@ -9,12 +9,19 @@ export async function GET(request: NextRequest) {
     console.log(`[${requestId}] 📍 Request URL: ${request.url}`);
     console.log(`[${requestId}] 📝 Request Method: ${request.method}`);
 
-    // Note: GET requests are allowed without authentication for registration purposes
-    // Only POST (creation) requires authentication
+    // Check for authorization header (required for admin panel data)
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        console.log(`[${requestId}] ❌ No authorization header provided`);
+        return NextResponse.json(
+            { error: 'Authorization required' },
+            { status: 401 }
+        );
+    }
 
     try {
-        // Forward the request to the external API
-        const externalApiUrl = 'https://jfgg9t4b-8000.uks1.devtunnels.ms/api/departments/';
+        // Forward the request to the external API admin panel endpoint
+        const externalApiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/admin-panel/departments/`;
         console.log(`[${requestId}] 🌐 Forwarding to external API: ${externalApiUrl}`);
 
         const fetchStartTime = Date.now();
@@ -22,6 +29,7 @@ export async function GET(request: NextRequest) {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
+                'Authorization': authHeader,
             },
         });
 
@@ -111,7 +119,7 @@ export async function POST(request: NextRequest) {
         console.log(`[${requestId}] ✅ Validation passed for fields: ${requiredFields.join(', ')}`);
 
         // Forward the request to the external API
-        const externalApiUrl = 'https://jfgg9t4b-8000.uks1.devtunnels.ms/api/departments/';
+        const externalApiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/departments/`;
         console.log(`[${requestId}] 🌐 Forwarding to external API: ${externalApiUrl}`);
         console.log(`[${requestId}] 📤 Sending payload:`, JSON.stringify(body, null, 2));
 

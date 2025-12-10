@@ -13,9 +13,10 @@ interface Department {
     id: number;
     name: string;
     description: string;
-    leader: string;
-    members?: number;
-    created?: string;
+    leader: number | null; // Changed from string to number | null to match API
+    is_active: boolean;
+    created_at: string;
+    updated_at: string;
 }
 
 export default function DepartmentsManagement() {
@@ -50,8 +51,8 @@ export default function DepartmentsManagement() {
 
             if (response.ok) {
                 const data = await response.json()
-                // Handle both array response and object with results property
-                const departments = Array.isArray(data) ? data : (data.results || [])
+                // Extract departments from results array (API returns paginated data)
+                const departments = data.results || []
                 setDepartments(departments)
             } else {
                 console.error('Failed to fetch departments')
@@ -91,11 +92,12 @@ export default function DepartmentsManagement() {
                 const newDepartment = await response.json()
                 setDepartments([...departments_list, {
                     id: newDepartment.id || departments_list.length + 1,
-                    name: formData.name,
-                    description: formData.description,
-                    leader: formData.leader ? `Leader ID: ${formData.leader}` : 'No leader assigned',
-                    members: 0,
-                    created: new Date().toISOString().split('T')[0],
+                    name: newDepartment.name || formData.name,
+                    description: newDepartment.description || formData.description,
+                    leader: newDepartment.leader,
+                    is_active: newDepartment.is_active ?? true,
+                    created_at: newDepartment.created_at || new Date().toISOString(),
+                    updated_at: newDepartment.updated_at || new Date().toISOString(),
                 }])
                 setFormData({ name: "", description: "", leader: "" })
                 setIsDialogOpen(false)
@@ -190,12 +192,14 @@ export default function DepartmentsManagement() {
                 </Card>
                 <Card className="p-4 glass-card border-2 border-primary/20">
                     <p className="text-muted-foreground text-sm">Active Leaders</p>
-                    <p className="text-3xl font-display font-bold text-primary mt-2">{departments_list.length}</p>
+                    <p className="text-3xl font-display font-bold text-primary mt-2">
+                        {Array.from(new Set(departments_list.filter(dept => dept.leader !== null && dept.leader !== 0).map(dept => dept.leader))).length}
+                    </p>
                 </Card>
                 <Card className="p-4 glass-card border-2 border-primary/20">
                     <p className="text-muted-foreground text-sm">Total Members</p>
                     <p className="text-3xl font-display font-bold text-foreground mt-2">
-                        {departments_list.reduce((sum, dept) => sum + (dept.members || 0), 0)}
+                        0
                     </p>
                 </Card>
                 <Card className="p-4 glass-card border-2 border-primary/20">
@@ -214,7 +218,7 @@ export default function DepartmentsManagement() {
                                 <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Name</th>
                                 <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Description</th>
                                 <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Leader</th>
-                                <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Members</th>
+                                <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Status</th>
                                 <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Created</th>
                                 <th className="px-4 py-3 text-center text-sm font-semibold text-foreground">Actions</th>
                             </tr>
@@ -224,9 +228,20 @@ export default function DepartmentsManagement() {
                                 <tr key={department.id} className="border-b border-border hover:bg-muted/50 transition-colors">
                                     <td className="px-4 py-4 text-sm text-foreground font-medium">{department.name}</td>
                                     <td className="px-4 py-4 text-sm text-muted-foreground max-w-xs truncate">{department.description}</td>
-                                    <td className="px-4 py-4 text-sm text-muted-foreground">{department.leader}</td>
-                                    <td className="px-4 py-4 text-sm text-muted-foreground">{department.members}</td>
-                                    <td className="px-4 py-4 text-sm text-muted-foreground">{department.created}</td>
+                                    <td className="px-4 py-4 text-sm text-muted-foreground">
+                                        {department.leader ? `Leader ${department.leader}` : 'No leader assigned'}
+                                    </td>
+                                    <td className="px-4 py-4 text-sm text-muted-foreground">
+                                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${department.is_active
+                                            ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
+                                            : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'
+                                            }`}>
+                                            {department.is_active ? 'Active' : 'Inactive'}
+                                        </span>
+                                    </td>
+                                    <td className="px-4 py-4 text-sm text-muted-foreground">
+                                        {new Date(department.created_at).toLocaleDateString()}
+                                    </td>
                                     <td className="px-4 py-4 flex items-center justify-center gap-2">
                                         <button className="p-2 hover:bg-muted rounded-lg transition-colors">
                                             <Eye className="w-4 h-4 text-primary" />
@@ -270,16 +285,25 @@ export default function DepartmentsManagement() {
                                 <div className="grid grid-cols-2 gap-4 text-sm">
                                     <div>
                                         <p className="text-muted-foreground">Leader</p>
-                                        <p className="text-foreground font-medium truncate">{department.leader}</p>
+                                        <p className="text-foreground font-medium truncate">
+                                            {department.leader ? `Leader ${department.leader}` : 'No leader assigned'}
+                                        </p>
                                     </div>
                                     <div>
-                                        <p className="text-muted-foreground">Members</p>
-                                        <p className="text-foreground font-medium">{department.members}</p>
+                                        <p className="text-muted-foreground">Status</p>
+                                        <p className="text-foreground font-medium">
+                                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${department.is_active
+                                                ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
+                                                : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'
+                                                }`}>
+                                                {department.is_active ? 'Active' : 'Inactive'}
+                                            </span>
+                                        </p>
                                     </div>
                                 </div>
 
                                 <div className="pt-2 border-t border-border">
-                                    <p className="text-xs text-muted-foreground">Created: {department.created}</p>
+                                    <p className="text-xs text-muted-foreground">Created: {new Date(department.created_at).toLocaleDateString()}</p>
                                 </div>
                             </div>
                         </Card>

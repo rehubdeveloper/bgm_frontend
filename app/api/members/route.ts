@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
         // Forward the request to the external API
         console.log('Sending to external API:', body);
 
-        const response = await fetch('https://jfgg9t4b-8000.uks1.devtunnels.ms/api/members/', {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/members/`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
