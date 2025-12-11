@@ -9,19 +9,12 @@ export async function GET(request: NextRequest) {
     console.log(`[${requestId}] 📍 Request URL: ${request.url}`);
     console.log(`[${requestId}] 📝 Request Method: ${request.method}`);
 
-    // Check for authorization header (required for admin panel data)
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        console.log(`[${requestId}] ❌ No authorization header provided`);
-        return NextResponse.json(
-            { error: 'Authorization required' },
-            { status: 401 }
-        );
-    }
+    // GET requests don't require authentication (for registration form)
+    // Other methods (POST, PUT, DELETE) require authorization
 
     try {
         // Forward the request to the external API admin panel endpoint
-        const externalApiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/admin-panel/departments/`;
+        const externalApiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/departments/`;
         console.log(`[${requestId}] 🌐 Forwarding to external API: ${externalApiUrl}`);
 
         const fetchStartTime = Date.now();
@@ -29,7 +22,7 @@ export async function GET(request: NextRequest) {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': authHeader,
+
             },
         });
 

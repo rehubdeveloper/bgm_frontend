@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="x-apple-disable-message-reformatting">
+    <meta name="color-scheme" content="light">
+    <meta name="supported-color-schemes" content="light">
+    <title>{{ title }} - Daily Devotional - BGM</title>
+    <style>
+        /* Email-safe CSS with modern design elements */
+        body,
+        table,
+        td,
+        p,
+        a,
+        li,
+        blockquote {
+            -webkit-text-size-adjust: 100%;
+            -ms-text-size-adjust: 100%;
+        }
+
+        table,
+        td {
+            mso-table-lspace: 0pt;
+            mso-table-rspace: 0pt;
+        }
+
+        img {
+            -ms-interpolation-mode: bicubic;
+        }
+
+        /* Modern Typography */
+        .title-font {
+            font-family: 'Georgia', 'Times New Roman', serif;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .body-font {
+            font-family: 'Arial', 'Helvetica', sans-serif;
+            color: #34495e;
+        }
+
+        /* Glass-like effects using solid colors */
+        .glass-header {
+            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+            border-radius: 16px;
+            border: 1px solid rgba(31, 142, 241, 0.2);
+        }
+
+        .glass-card {
+            background: linear-gradient(135deg, #f8fbfc 0%, #ffffff 100%);
+            border-radius: 12px;
+            border: 1px solid rgba(31, 142, 241, 0.15);
+            margin: 20px 0;
+        }
+
+        .glass-verse {
+            background: linear-gradient(135deg, #f0f4ff 0%, #e8f2ff 100%);
+            border-radius: 12px;
+            border-left: 4px solid #1f8ef1;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        /* Buttons */
+        .btn-primary {
+            background: linear-gradient(135deg, #1f8ef1 0%, #1a73e8 100%);
+            color: white !important;
+            padding: 14px 28px;
+            border-radius: 12px;
+            text-decoration: none;
+            font-weight: bold;
+            font-family: 'Arial', 'Helvetica', sans-serif;
+            display: inline-block;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(31, 142, 241, 0.3);
+        }
+
+        /* Spacing */
+        .section-spacing {
+            padding: 24px;
+            line-height: 1.6;
+        }
+
+        .header-spacing {
+            padding: 32px 24px 24px;
+        }
+
+        /* Verse styling */
+        .bible-verse {
+            font-style: italic;
+            font-size: 18px;
+            line-height: 1.5;
+            color: #2c3e50;
+            position: relative;
+        }
+
+        .verse-reference {
+            color: #1f8ef1;
+            font-weight: bold;
+            margin-top: 8px;
+            font-size: 14px;
+        }
+
+        /* Section headers */
+        .section-title {
+            color: #1f8ef1;
+            font-size: 20px;
+            font-weight: bold;
+            margin: 0 0 12px 0;
+            font-family: 'Georgia', 'Times New Roman', serif;
+        }
+
+        /* Footer */
+        .footer-text {
+            font-size: 12px;
+            color: #7f8c8d;
+            text-align: center;
+            line-height: 1.4;
+        }
+
+        /* Enhanced Responsive Design */
+        @media only screen and (max-width: 600px) {
+
+            .glass-header,
+            .glass-card,
+            .glass-verse {
+                border-radius: 12px !important;
+                margin: 16px 0 !important;
+            }
+
+            .section-spacing,
+            .header-spacing {
+                padding: 20px 16px !important;
+            }
+
+            .bible-verse {
+                font-size: 16px !important;
+                line-height: 1.4 !important;
+            }
+
+            .section-title {
+                font-size: 18px !important;
+                margin-bottom: 10px !important;
+            }
+
+            .btn-primary {
+                padding: 12px 20px !important;
+                font-size: 14px !important;
+                width: 100% !important;
+                max-width: 280px !important;
+            }
+
+            .footer-text {
+                font-size: 11px !important;
+            }
+
+            /* Stack footer links vertically on mobile */
+            .footer-links {
+                display: block !important;
+            }
+
+            .footer-link {
+                display: block !important;
+                margin: 8px 0 !important;
+            }
+        }
+
+        /* Extra small screens */
+        @media only screen and (max-width: 480px) {
+            .bible-verse {
+                font-size: 15px !important;
+            }
+
+            .section-title {
+                font-size: 16px !important;
+            }
+
+            .btn-primary {
+                padding: 10px 16px !important;
+                font-size: 13px !important;
+            }
+
+            .section-spacing {
+                padding: 16px 12px !important;
+            }
+
+            .glass-verse {
+                padding: 16px !important;
+            }
+        }
+
+        /* Outlook specific fixes */
+        @media screen and (-webkit-min-device-pixel-ratio:0) {
+
+            .glass-header,
+            .glass-card,
+            .glass-verse {
+                border-radius: 12px;
+            }
+        }
+    </style>
+</head>
+
+<body
+    style="margin: 0; padding: 0; background-color: #f8f9fa; font-family: 'Arial', 'Helvetica', sans-serif; line-height: 1.6; color: #34495e;">
+
+    <!-- Main Container -->
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+        <tr>
+            <td align="center" style="padding: 20px 10px;">
+
+                <!-- Email Content -->
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"
+                    style="max-width: 700px; background-color: #ffffff; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.1);">
+
+                    <!-- Header Section -->
+                    <tr>
+                        <td class="glass-header" style="padding: 32px 24px 24px; border-radius: 16px 16px 0 0;">
+                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                                <!-- Logo -->
+                                <tr>
+                                    <td align="center" style="padding-bottom: 20px;">
+                                        <img src="https://your-domain.com/BGM.png" alt="BGM Logo" width="60" height="60"
+                                            style="border-radius: 12px; background: linear-gradient(135deg, #1f8ef1 0%, #1a73e8 100%); padding: 8px;">
+                                    </td>
+                                </tr>
+                                <!-- Title -->
+                                <tr>
+                                    <td align="center" class="title-font"
+                                        style="font-size: 28px; color: #2c3e50; padding-bottom: 8px;">
+                                        Daily Devotional
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td align="center" class="title-font"
+                                        style="font-size: 22px; color: #1f8ef1; padding-bottom: 16px;">
+                                        {{ title }}
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- Bible Verse Section -->
+                    <tr>
+                        <td style="padding: 0 24px;">
+                            <div class="glass-verse">
+                                <p class="bible-verse"
+                                    style="margin: 0; font-style: italic; font-size: 18px; line-height: 1.5; color: #2c3e50;">
+                                    "{{ bible_verse }}"
+                                </p>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- Content Sections -->
+                    <tr>
+                        <td class="section-spacing">
+                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+
+                                <!-- Reflection Section -->
+                                <tr>
+                                    <td class="glass-card">
+                                        <h3 class="section-title">Reflection</h3>
+                                        <p class="body-font" style="margin: 0; line-height: 1.7; color: #34495e;">
+                                            {{ reflection }}
+                                        </p>
+                                    </td>
+                                </tr>
+
+                                <!-- Prayer Section -->
+                                <tr>
+                                    <td class="glass-card">
+                                        <h3 class="section-title">Prayer</h3>
+                                        <p class="body-font"
+                                            style="margin: 0; line-height: 1.7; color: #34495e; font-style: italic;">
+                                            {{ prayer }}
+                                        </p>
+                                    </td>
+                                </tr>
+
+                                <!-- Application Tip Section -->
+                                <tr>
+                                    <td class="glass-card">
+                                        <h3 class="section-title">Application Tip</h3>
+                                        <p class="body-font" style="margin: 0; line-height: 1.7; color: #34495e;">
+                                            {{ application_tip }}
+                                        </p>
+                                    </td>
+                                </tr>
+
+                                <!-- Closing Thought Section -->
+                                <tr>
+                                    <td class="glass-card">
+                                        <h3 class="section-title">Closing Thought</h3>
+                                        <p class="body-font" style="margin: 0; line-height: 1.7; color: #34495e;">
+                                            {{ closing_thought }}
+                                        </p>
+                                    </td>
+                                </tr>
+
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- CTA Section -->
+                    <tr>
+                        <td align="center" style="padding: 32px 24px 24px;">
+                            <a href="{{ link }}" class="btn-primary">
+                                Read Full Devotional &rarr;
+                            </a>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td
+                            style="padding: 24px; background: linear-gradient(135deg, #f8f9fa 0%, #f1f2f3 100%); border-radius: 0 0 16px 16px; border-top: 1px solid rgba(0,0,0,0.05);">
+                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                                <tr>
+                                    <td align="center">
+                                        <p class="footer-text"
+                                            style="margin: 0; font-size: 14px; color: #2c3e50; font-weight: bold; margin-bottom: 8px;">
+                                            Believers Glorious Ministry
+                                        </p>
+                                        <p class="footer-text" style="margin: 0;">
+                                            Building faith, strengthening community, sharing hope
+                                        </p>
+                                        <p class="footer-text" style="margin: 8px 0 0;">
+                                            <a href="#"
+                                                style="color: #1f8ef1; text-decoration: none; margin: 0 8px;">Website</a>
+                                            |
+                                            <a href="#"
+                                                style="color: #1f8ef1; text-decoration: none; margin: 0 8px;">Facebook</a>
+                                            |
+                                            <a href="#"
+                                                style="color: #1f8ef1; text-decoration: none; margin: 0 8px;">Instagram</a>
+                                        </p>
+                                        <p class="footer-text" style="margin: 12px 0 0;">
+                                            Stay blessed & encouraged in your faith journey
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                </table>
+
+            </td>
+        </tr>
+    </table>
+
+</body>
+
+</html>

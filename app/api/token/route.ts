@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Forward the request to the external API
-        console.log('Sending login request to external API:', { email: body.email });
+        console.log('Sending login request to external API:', { email: body.email, hasPassword: !!body.password })
 
         const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/token/`, {
             method: 'POST',

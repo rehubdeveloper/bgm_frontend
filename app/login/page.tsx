@@ -10,11 +10,13 @@ import * as z from 'zod'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { toast } from 'sonner'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Shield, Mail, Lock } from 'lucide-react'
+import Link from 'next/link'
+import Image from 'next/image'
 
 const formSchema = z.object({
-    email: z.string().email('Invalid email address'),
+    email: z.string().email('Please enter a valid email address'),
     password: z.string().min(1, 'Password is required'),
 })
 
@@ -22,6 +24,8 @@ type FormData = z.infer<typeof formSchema>
 
 export default function LoginPage() {
     const [isLoading, setIsLoading] = useState(false)
+    const [error, setError] = useState('')
+    const [success, setSuccess] = useState('')
     const router = useRouter()
 
     const form = useForm<FormData>({
@@ -34,7 +38,12 @@ export default function LoginPage() {
 
     const onSubmit = async (data: FormData) => {
         setIsLoading(true)
+        setError('')
+        setSuccess('')
+
         try {
+            console.log('Login form data:', { email: data.email, hasPassword: !!data.password })
+
             const response = await fetch('/api/token', {
                 method: 'POST',
                 headers: {
@@ -43,75 +52,178 @@ export default function LoginPage() {
                 body: JSON.stringify(data),
             })
 
-            const result = await response.json()
+            let result
+            try {
+                result = await response.json()
+            } catch {
+                result = { detail: 'Invalid response from server' }
+            }
 
-            if (response.ok) {
-                toast.success('Login successful!')
-                // Store tokens in localStorage or handle as needed
-                if (result.access && result.refresh) {
-                    localStorage.setItem('access_token', result.access)
-                    localStorage.setItem('refresh_token', result.refresh)
-                }
+            if (response.ok && result.access) {
+                setSuccess('Login successful! Redirecting...')
+                // Store tokens in localStorage
+                localStorage.setItem('access_token', result.access)
+                localStorage.setItem('refresh_token', result.refresh || '')
+
                 form.reset()
-                // Redirect to home page
-                router.push('/')
+                // Small delay to show success message
+                setTimeout(() => {
+                    router.push('/')
+                }, 1000)
             } else {
-                toast.error(result.error || 'Login failed')
+                // Handle different error types
+                if (result.detail) {
+                    setError(result.detail)
+                } else if (result.error) {
+                    setError(result.error)
+                } else if (response.status === 401) {
+                    setError('Invalid email or password. Please check your credentials.')
+                } else if (response.status >= 500) {
+                    setError('Server error. Please try again later.')
+                } else {
+                    setError('Login failed. Please try again.')
+                }
             }
         } catch (error) {
-            toast.error('An error occurred during login')
+            setError('Network error. Please check your connection and try again.')
         } finally {
             setIsLoading(false)
         }
     }
 
     return (
-        <div className="container mx-auto py-8 px-4">
-            <Card className="max-w-md mx-auto">
-                <CardHeader>
-                    <CardTitle>Member Login</CardTitle>
-                    <CardDescription>
-                        Sign in to access your account.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
+            <div className="w-full max-w-md space-y-8">
+                {/* BGM Logo/Branding */}
+                <div className="text-center">
+                    <div className="mx-auto w-20 h-20 bg-gradient-to-br from-blue-600 to-blue-800 rounded-2xl flex items-center justify-center mb-6 shadow-lg">
+                        <Image src="/BGM.png" alt="BGM Logo" width={40} height={40} />
+                    </div>
+                    <h1 className="text-3xl font-display font-bold text-slate-900 mb-2">
+                        Welcome Back
+                    </h1>
+                    <p className="text-slate-600 font-body">
+                        Sign in to your Believers Glorious Ministry account
+                    </p>
+                </div>
+
+                {/* Login Form */}
+                <div className="glass-strong rounded-2xl shadow-xl border border-white/20 p-8">
                     <Form {...form}>
-                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                            {/* Error Alert */}
+                            {error && (
+                                <Alert variant="destructive" className="border-red-200 bg-red-50">
+                                    <AlertDescription className="text-red-800">
+                                        {error}
+                                    </AlertDescription>
+                                </Alert>
+                            )}
+
+                            {/* Success Alert */}
+                            {success && (
+                                <Alert className="border-green-200 bg-green-50">
+                                    <AlertDescription className="text-green-800">
+                                        {success}
+                                    </AlertDescription>
+                                </Alert>
+                            )}
+
+                            {/* Email Field */}
                             <FormField
                                 control={form.control}
                                 name="email"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Email</FormLabel>
+                                        <FormLabel className="text-slate-700 font-semibold flex items-center gap-2">
+                                            <Mail className="w-4 h-4" />
+                                            Email Address
+                                        </FormLabel>
                                         <FormControl>
-                                            <Input type="email" placeholder="Enter your email" {...field} />
+                                            <div className="relative">
+                                                <Input
+                                                    type="email"
+                                                    placeholder="Enter your email address"
+                                                    className="bg-white/50 backdrop-blur-sm border-slate-200 focus:border-blue-400 focus:ring-blue-400/20 h-12 pl-4"
+                                                    {...field}
+                                                />
+                                                <Mail className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                            </div>
                                         </FormControl>
-                                        <FormMessage />
+                                        <FormMessage className="text-red-600" />
                                     </FormItem>
                                 )}
                             />
 
+                            {/* Password Field */}
                             <FormField
                                 control={form.control}
                                 name="password"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Password</FormLabel>
+                                        <FormLabel className="text-slate-700 font-semibold flex items-center gap-2">
+                                            <Lock className="w-4 h-4" />
+                                            Password
+                                        </FormLabel>
                                         <FormControl>
-                                            <Input type="password" placeholder="Enter your password" {...field} />
+                                            <div className="relative">
+                                                <Input
+                                                    type="password"
+                                                    placeholder="Enter your password"
+                                                    className="bg-white/50 backdrop-blur-sm border-slate-200 focus:border-blue-400 focus:ring-blue-400/20 h-12 pl-4"
+                                                    {...field}
+                                                />
+                                                <Lock className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                            </div>
                                         </FormControl>
-                                        <FormMessage />
+                                        <FormMessage className="text-red-600" />
                                     </FormItem>
                                 )}
                             />
 
-                            <Button type="submit" className="w-full" disabled={isLoading}>
-                                {isLoading ? 'Signing in...' : 'Sign In'}
+                            {/* Submit Button */}
+                            <Button
+                                type="submit"
+                                className="w-full h-12 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-200"
+                                disabled={isLoading}
+                            >
+                                {isLoading ? (
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                        Signing In...
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center gap-2">
+                                        <Shield className="w-4 h-4" />
+                                        Sign In
+                                    </div>
+                                )}
                             </Button>
                         </form>
                     </Form>
-                </CardContent>
-            </Card>
+
+                    {/* Links */}
+                    <div className="mt-6 text-center space-y-2">
+                        <p className="text-slate-600">
+                            Don't have an account?{' '}
+                            <Link href="/register" className="text-blue-600 hover:text-blue-700 font-semibold">
+                                Join our community
+                            </Link>
+                        </p>
+                        <Link href="/" className="text-slate-500 hover:text-slate-600 text-sm inline-block">
+                            ← Back to home
+                        </Link>
+                    </div>
+                </div>
+
+                {/* Footer */}
+                <div className="text-center">
+                    <p className="text-slate-500 text-sm">
+                        Believers Glorious Ministry<br />
+                        Building faith, strengthening community
+                    </p>
+                </div>
+            </div>
         </div>
     )
 }
