@@ -113,78 +113,6 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground overflow-hidden">
-      {/* Fixed Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 glass-stron">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16 md:h-20">
-            {/* Logo */}
-            <div className="flex items-center gap-3 group cursor-pointer">
-              <div className="w-15 h-15 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold text-lg">
-                <Image src="/BGM.png" alt="BGM Logo" width={50} height={50} />
-              </div>
-              <div className="hidden sm:block">
-                <p className="font-display font-bold text-lg">BGM</p>
-                <p className="text-xs text-muted-foreground">Believers Glorious</p>
-              </div>
-            </div>
-
-            {/* Nav */}
-            <nav className="hidden md:flex items-center gap-8">
-              {["Home", "About", "Ministries", "Contact"].map((item) => (
-                <a
-                  key={item}
-                  href={`#${item.toLowerCase()}`}
-                  className="text-sm font-body font-medium hover:text-primary transition-colors relative group"
-                >
-                  {item}
-                  <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-primary group-hover:w-full transition-all duration-300" />
-                </a>
-              ))}
-              <a
-                href="#"
-                className="text-sm font-body font-medium hover:text-primary transition-colors relative group"
-              >
-                Watch Live
-                <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-primary group-hover:w-full transition-all duration-300" />
-              </a>
-            </nav>
-
-            {/* Auth Buttons */}
-            {!checkingAuth && (
-              <div className="flex items-center gap-2 md:gap-3">
-                {!isLoggedIn ? (
-                  <>
-                    <Link
-                      href="/login"
-                      className="btn-outline text-sm px-3 md:px-4 py-2 hover:bg-primary/10 transition-colors"
-                    >
-                      Login
-                    </Link>
-                    <Link href="/register" className="btn-primary text-sm px-4 md:px-6">
-                      Register
-                    </Link>
-                  </>
-                ) : (
-                  <div className="flex items-center gap-2 md:gap-3">
-                    <span className="text-sm text-muted-foreground hidden sm:block">
-                      Welcome back!
-                    </span>
-                    <button
-                      onClick={handleLogout}
-                      className="btn-outline text-sm px-3 md:px-4 py-2 hover:bg-red-50 hover:text-red-600 hover:border-red-300 transition-colors flex items-center gap-2"
-                      title="Logout"
-                    >
-                      <LogOut className="w-4 h-4" />
-                      <span className="hidden md:inline">Logout</span>
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      </header>
-
       {/* Hero Section */}
       <section className="relative pt-20 pb-8 px-3 sm:px-6 lg:px-8">
         <div className="max-w-6xl mx-auto">
@@ -533,89 +461,127 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-border bg-card py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-6xl mx-auto">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-8">
-            <div>
-              <h3 className="font-display font-bold mb-4">Quick Links</h3>
-              <ul className="space-y-2 font-body">
-                <li>
-                  <a href="#" className="text-muted-foreground hover:text-primary transition">
-                    Home
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="text-muted-foreground hover:text-primary transition">
-                    About
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="text-muted-foreground hover:text-primary transition">
-                    Ministries
-                  </a>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="font-display font-bold mb-4">Resources</h3>
-              <ul className="space-y-2 font-body">
-                <li>
-                  <a href="#" className="text-muted-foreground hover:text-primary transition">
-                    Sermons
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="text-muted-foreground hover:text-primary transition">
-                    Events
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="text-muted-foreground hover:text-primary transition">
-                    Give & Support
-                  </a>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="font-display font-bold mb-4">Community</h3>
-              <ul className="space-y-2 font-body">
-                <li>
-                  <a href="#" className="text-muted-foreground hover:text-primary transition">
-                    Groups
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="text-muted-foreground hover:text-primary transition">
-                    Prayer Requests
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="text-muted-foreground hover:text-primary transition">
-                    Stories
-                  </a>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="font-display font-bold mb-4">Follow Us</h3>
-              <ul className="space-y-2 font-body">
-                <li>
-                  <a href="#" className="text-muted-foreground hover:text-primary transition">
-                    Facebook
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="text-muted-foreground hover:text-primary transition">
-                    Instagram
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="text-muted-foreground hover:text-primary transition">
-                    Twitter
-                  </a>
-                </li>
-              </ul>
+      <div className="max-w-6xl mx-auto">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-8">
+          <div>
+            <h3 className="font-display font-bold mb-4">Quick Links</h3>
+            <ul className="space-y-2 font-body">
+              <li>
+                <a href="#" className="text-muted-foreground hover:text-primary transition">
+                  Home
+                </a>
+              </li>
+              <li>
+                <a href="#" className="text-muted-foreground hover:text-primary transition">
+                  About
+                </a>
+              </li>
+              <li>
+                <a href="#" className="text-muted-foreground hover:text-primary transition">
+                  Ministries
+                </a>
+              </li>
+            </ul>
+          </div>
+          <div>
+            <h3 className="font-display font-bold mb-4">Resources</h3>
+            <ul className="space-y-2 font-body">
+              <li>
+                <a href="#" className="text-muted-foreground hover:text-primary transition">
+                  Sermons
+                </a>
+              </li>
+              <li>
+                <a href="#" className="text-muted-foreground hover:text-primary transition">
+                  Events
+                </a>
+              </li>
+              <li>
+                <a href="#" className="text-muted-foreground hover:text-primary transition">
+                  Give & Support
+                </a>
+              </li>
+            </ul>
+          </div>
+          <div>
+            <h3 className="font-display font-bold mb-4">Community</h3>
+            <ul className="space-y-2 font-body">
+              <li>
+                <a href="#" className="text-muted-foreground hover:text-primary transition">
+                  Groups
+                </a>
+              </li>
+              <li>
+                <a href="#" className="text-muted-foreground hover:text-primary transition">
+                  Prayer Requests
+                </a>
+              </li>
+              <li>
+                <a href="#" className="text-muted-foreground hover:text-primary transition">
+                  Stories
+                </a>
+              </li>
+            </ul>
+          </div>
+          <div>
+            <h3 className="font-display font-bold mb-4">Follow Us</h3>
+            <ul className="space-y-2 font-body">
+              <li>
+                <a href="#" className="text-muted-foreground hover:text-primary transition">
+                  Facebook
+                </a>
+              </li>
+              <li>
+                <a href="#" className="text-muted-foreground hover:text-primary transition">
+                  Instagram
+                </a>
+              </li>
+              <li>
+                <a href="#" className="text-muted-foreground hover:text-primary transition">
+                  Twitter
+                </a>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        {/* Divider */}
+        <div className="border-t border-gray-200 pt-8 sm:pt-12">
+          <div className="flex flex-col xs:flex-row items-start xs:items-center justify-between gap-4 xs:gap-6">
+
+            {/* Contact info */}
+            <div className="flex flex-col xs:flex-row items-start xs:items-center gap-4 xs:gap-6">
+              {/* <a
+                href="mailto:tech@rehubdevelopers.com"
+                className="flex items-center gap-2 text-sm text-gray-600 hover:text-blue-600 transition"
+              >
+                <Mail className="w-4 h-4 flex-shrink-0" />
+                tech@rehubdevelopers.com
+              </a>
+              <a
+                href="tel:+1-800-ARC-VOICE"
+                className="flex items-center gap-2 text-sm text-gray-600 hover:text-blue-600 transition"
+              >
+                <Phone className="w-4 h-4 flex-shrink-0" />
+                +234 810 722 4097
+              </a> */}
+              <p className="flex items-center gap-2">
+                Product of
+                <Link
+                  href="https://www.rehubdevelopers.com/"
+                  target="_blank"
+                  className="text-blue-600 hover:underline flex items-center gap-2"
+                >
+                  Rehub Developers
+                  <Image
+                    src="/rehubdevelopers.jpg"
+                    alt="Rehub Developers"
+                    width={20}
+                    height={20}
+                    className="inline-block"
+                  />
+                </Link>
+              </p>
             </div>
           </div>
 
@@ -625,7 +591,8 @@ export default function LandingPage() {
             </p>
           </div>
         </div>
-      </footer>
+      </div>
     </div>
+
   )
 }
