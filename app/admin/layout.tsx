@@ -26,12 +26,25 @@ export default function AdminLayout({
       return
     }
 
-    // Check if already authorized as admin
+    // Check if already authorized as admin and session hasn't expired
     const adminAuthorized = localStorage.getItem('admin_authorized') === 'true'
-    if (adminAuthorized) {
-      setIsAuthorized(true)
+    const adminAuthTime = localStorage.getItem('admin_auth_time')
+    const sessionTimeout = 60 * 60 * 1000 // 1 hour in milliseconds
+
+    if (adminAuthorized && adminAuthTime) {
+      const authTime = parseInt(adminAuthTime, 10)
+      const now = Date.now()
+
+      if (now - authTime < sessionTimeout) {
+        setIsAuthorized(true)
+      } else {
+        // Session expired - clear authorization and require PIN again
+        localStorage.removeItem('admin_authorized')
+        localStorage.removeItem('admin_auth_time')
+        setIsPinModalOpen(true)
+      }
     } else {
-      // Show PIN verification modal
+      // No authorization - show PIN verification modal
       setIsPinModalOpen(true)
     }
   }, [router])
@@ -86,6 +99,7 @@ export default function AdminLayout({
               localStorage.removeItem('access_token')
               localStorage.removeItem('refresh_token')
               localStorage.removeItem('admin_authorized')
+              localStorage.removeItem('admin_auth_time')
               router.replace('/login')
             }}
           >

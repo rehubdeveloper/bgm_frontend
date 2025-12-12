@@ -6,8 +6,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { useState, useEffect } from "react"
-import { Plus, BookOpen, Loader2, CheckCircle, AlertCircle } from "lucide-react"
+import { Plus, BookOpen, Loader2, CheckCircle, AlertCircle, Edit, Trash2 } from "lucide-react"
 
 interface Devotional {
     id?: number;
@@ -26,8 +27,11 @@ export default function DevotionalsManagement() {
     const [loading, setLoading] = useState(true)
     const [isDialogOpen, setIsDialogOpen] = useState(false)
     const [isViewDialogOpen, setIsViewDialogOpen] = useState(false)
+    const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
     const [selectedDevotional, setSelectedDevotional] = useState<Devotional | null>(null)
+    const [editingDevotional, setEditingDevotional] = useState<Devotional | null>(null)
     const [isSubmitting, setIsSubmitting] = useState(false)
+    const [isDeleting, setIsDeleting] = useState(false)
     const [submitError, setSubmitError] = useState("")
     const [submitSuccess, setSubmitSuccess] = useState("")
     const [formData, setFormData] = useState({
@@ -60,8 +64,8 @@ export default function DevotionalsManagement() {
 
             if (response.ok) {
                 const data = await response.json()
-                // Handle both array response and object with results property
-                const devotionalsList = Array.isArray(data) ? data : (data.results || [])
+                // Handle response with results property (pagination format)
+                const devotionalsList = data.results || []
                 setDevotionals(devotionalsList)
             } else {
                 console.error('Failed to fetch devotionals')
@@ -140,6 +144,112 @@ export default function DevotionalsManagement() {
     const handleViewDevotional = (devotional: Devotional) => {
         setSelectedDevotional(devotional)
         setIsViewDialogOpen(true)
+    }
+
+    const handleEditDevotional = (devotional: Devotional) => {
+        setEditingDevotional(devotional)
+        setFormData({
+            title: devotional.title,
+            bible_verse: devotional.bible_verse,
+            reflection: devotional.reflection,
+            prayer: devotional.prayer,
+            application_tip: devotional.application_tip,
+            closing_thought: devotional.closing_thought,
+        })
+        setIsEditDialogOpen(true)
+    }
+
+    const handleUpdateDevotional = async (e: React.FormEvent) => {
+        e.preventDefault()
+        if (!editingDevotional?.id) return
+
+        setIsSubmitting(true)
+        setSubmitError("")
+        setSubmitSuccess("")
+
+        try {
+            const token = localStorage.getItem('access_token')
+            if (!token) {
+                console.error('No access token found')
+                setSubmitError('Authentication required')
+                return
+            }
+
+            const response = await fetch(`/api/contents/devotionals/${editingDevotional.id}/`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify(formData),
+            })
+
+            if (response.ok) {
+                const updatedDevotional = await response.json()
+                setDevotionals(devotionals.map(d => d.id === editingDevotional.id ? updatedDevotional : d))
+                setIsEditDialogOpen(false)
+                setSubmitSuccess("Daily devotional updated successfully!")
+                // Clear success message after 3 seconds
+                setTimeout(() => setSubmitSuccess(""), 3000)
+            } else {
+                const errorData = await response.json()
+                setSubmitError(errorData.error || `Failed to update devotional (${response.status})`)
+            }
+        } catch (error) {
+            console.error('Error updating devotional:', error)
+            setSubmitError('Network error occurred')
+        } finally {
+            setIsSubmitting(false)
+        }
+    }
+
+    const handleDeleteDevotional = async (devotional: Devotional) => {
+        if (!devotional.id) return
+
+        setIsDeleting(true)
+        try {
+            const token = localStorage.getItem('access_token')
+            if (!token) {
+                console.error('No access token found')
+                return
+            }
+
+            const response = await fetch(`/api/contents/devotionals/${devotional.id}/`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            })
+
+            if (response.ok) {
+                setDevotionals(devotionals.filter(d => d.id !== devotional.id))
+                setSubmitSuccess("Daily devotional deleted successfully!")
+                // Clear success message after 3 seconds
+                setTimeout(() => setSubmitSuccess(""), 3000)
+            } else {
+                const errorData = await response.json()
+                setSubmitError(errorData.error || `Failed to delete devotional (${response.status})`)
+            }
+        } catch (error) {
+            console.error('Error deleting devotional:', error)
+            setSubmitError('Network error occurred')
+        } finally {
+            setIsDeleting(false)
+        }
+    }
+
+    const resetEditForm = () => {
+        setEditingDevotional(null)
+        setFormData({
+            title: "",
+            bible_verse: "",
+            reflection: "",
+            prayer: "",
+            application_tip: "",
+            closing_thought: "",
+        })
+        setSubmitError("")
+        setIsEditDialogOpen(false)
     }
 
     return (
@@ -264,6 +374,115 @@ export default function DevotionalsManagement() {
                                         <>
                                             <BookOpen className="w-4 h-4 mr-2 cursor-pointer" />
                                             Create Devotional
+                                        </>
+                                    )}
+                                </Button>
+                            </div>
+                        </form>
+                    </DialogContent>
+                </Dialog>
+
+                {/* Edit Devotional Dialog */}
+                <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+                    <DialogContent className="sm:max-w-[500px] mx-4 max-h-[90vh] overflow-y-auto">
+                        <DialogHeader>
+                            <DialogTitle className="text-lg md:text-xl">{editingDevotional?.title ? `Edit "${editingDevotional.title}"` : 'Edit Devotional'}</DialogTitle>
+                        </DialogHeader>
+
+                        {submitError && (
+                            <div className="flex items-center gap-2 text-red-700 bg-red-50 border border-red-200 rounded-lg p-3">
+                                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                                <p className="text-sm">{submitError}</p>
+                            </div>
+                        )}
+
+                        <form onSubmit={handleUpdateDevotional} className="space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-title" className="text-sm md:text-base font-medium">Title</Label>
+                                <Input
+                                    id="edit-title"
+                                    value={formData.title}
+                                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                                    placeholder="Enter devotional title"
+                                    required
+                                    className="text-sm md:text-base"
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-bible_verse" className="text-sm md:text-base font-medium">Bible Verse</Label>
+                                <Input
+                                    id="edit-bible_verse"
+                                    value={formData.bible_verse}
+                                    onChange={(e) => setFormData({ ...formData, bible_verse: e.target.value })}
+                                    placeholder="e.g., Hebrews 11:1"
+                                    required
+                                    className="text-sm md:text-base"
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-reflection" className="text-sm md:text-base font-medium">Reflection</Label>
+                                <Textarea
+                                    id="edit-reflection"
+                                    value={formData.reflection}
+                                    onChange={(e) => setFormData({ ...formData, reflection: e.target.value })}
+                                    placeholder="Write the main reflection content..."
+                                    required
+                                    className="text-sm md:text-base min-h-[80px] md:min-h-[100px]"
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-prayer" className="text-sm md:text-base font-medium">Prayer</Label>
+                                <Textarea
+                                    id="edit-prayer"
+                                    value={formData.prayer}
+                                    onChange={(e) => setFormData({ ...formData, prayer: e.target.value })}
+                                    placeholder="Write the closing prayer..."
+                                    required
+                                    className="text-sm md:text-base min-h-[80px] md:min-h-[100px]"
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-application_tip" className="text-sm md:text-base font-medium">Application Tip</Label>
+                                <Textarea
+                                    id="edit-application_tip"
+                                    value={formData.application_tip}
+                                    onChange={(e) => setFormData({ ...formData, application_tip: e.target.value })}
+                                    placeholder="How can readers apply this to their daily life?"
+                                    required
+                                    className="text-sm md:text-base min-h-[80px] md:min-h-[100px]"
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-closing_thought" className="text-sm md:text-base font-medium">Closing Thought</Label>
+                                <Textarea
+                                    id="edit-closing_thought"
+                                    value={formData.closing_thought}
+                                    onChange={(e) => setFormData({ ...formData, closing_thought: e.target.value })}
+                                    placeholder="Final encouraging words..."
+                                    required
+                                    className="text-sm md:text-base min-h-[60px] md:min-h-[80px]"
+                                />
+                            </div>
+
+                            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-4">
+                                <Button type="button" variant="outline" onClick={resetEditForm} className="w-full sm:w-auto">
+                                    Cancel
+                                </Button>
+                                <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
+                                    {isSubmitting ? (
+                                        <>
+                                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                            Updating...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Edit className="w-4 h-4 mr-2 cursor-pointer" />
+                                            Update Devotional
                                         </>
                                     )}
                                 </Button>
@@ -454,6 +673,42 @@ export default function DevotionalsManagement() {
                                                 >
                                                     <BookOpen className="w-4 h-4 text-primary" />
                                                 </button>
+                                                <button
+                                                    onClick={() => handleEditDevotional(devotional)}
+                                                    className="p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer"
+                                                    title="Edit devotional"
+                                                >
+                                                    <Edit className="w-4 h-4 text-blue-500" />
+                                                </button>
+                                                <AlertDialog>
+                                                    <AlertDialogTrigger asChild>
+                                                        <button
+                                                            className="p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer"
+                                                            title="Delete devotional"
+                                                        >
+                                                            <Trash2 className="w-4 h-4 text-red-500" />
+                                                        </button>
+                                                    </AlertDialogTrigger>
+                                                    <AlertDialogContent>
+                                                        <AlertDialogHeader>
+                                                            <AlertDialogTitle>Delete Devotional</AlertDialogTitle>
+                                                            <AlertDialogDescription>
+                                                                Are you sure you want to delete "<strong>{devotional.title}</strong>"?
+                                                                This action cannot be undone.
+                                                            </AlertDialogDescription>
+                                                        </AlertDialogHeader>
+                                                        <AlertDialogFooter>
+                                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                            <AlertDialogAction
+                                                                onClick={() => handleDeleteDevotional(devotional)}
+                                                                className="bg-red-600 hover:bg-red-700"
+                                                                disabled={isDeleting}
+                                                            >
+                                                                {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Delete"}
+                                                            </AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                </AlertDialog>
                                             </td>
                                         </tr>
                                     ))}
@@ -476,13 +731,51 @@ export default function DevotionalsManagement() {
                                                     <p className="text-sm text-muted-foreground mt-1">{devotional.bible_verse}</p>
                                                 </div>
                                             </div>
-                                            <button
-                                                onClick={() => handleViewDevotional(devotional)}
-                                                className="p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer flex-shrink-0"
-                                                title="View devotional"
-                                            >
-                                                <BookOpen className="w-4 h-4 text-primary" />
-                                            </button>
+                                            <div className="flex items-center gap-1 flex-shrink-0">
+                                                <button
+                                                    onClick={() => handleViewDevotional(devotional)}
+                                                    className="p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer"
+                                                    title="View devotional"
+                                                >
+                                                    <BookOpen className="w-4 h-4 text-primary" />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleEditDevotional(devotional)}
+                                                    className="p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer"
+                                                    title="Edit devotional"
+                                                >
+                                                    <Edit className="w-4 h-4 text-blue-500" />
+                                                </button>
+                                                <AlertDialog>
+                                                    <AlertDialogTrigger asChild>
+                                                        <button
+                                                            className="p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer"
+                                                            title="Delete devotional"
+                                                        >
+                                                            <Trash2 className="w-4 h-4 text-red-500" />
+                                                        </button>
+                                                    </AlertDialogTrigger>
+                                                    <AlertDialogContent>
+                                                        <AlertDialogHeader>
+                                                            <AlertDialogTitle>Delete Devotional</AlertDialogTitle>
+                                                            <AlertDialogDescription>
+                                                                Are you sure you want to delete "<strong>{devotional.title}</strong>"?
+                                                                This action cannot be undone.
+                                                            </AlertDialogDescription>
+                                                        </AlertDialogHeader>
+                                                        <AlertDialogFooter>
+                                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                            <AlertDialogAction
+                                                                onClick={() => handleDeleteDevotional(devotional)}
+                                                                className="bg-red-600 hover:bg-red-700"
+                                                                disabled={isDeleting}
+                                                            >
+                                                                {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Delete"}
+                                                            </AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                </AlertDialog>
+                                            </div>
                                         </div>
 
                                         <div className="space-y-2">

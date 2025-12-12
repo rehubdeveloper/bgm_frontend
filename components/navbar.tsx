@@ -73,7 +73,7 @@ export default function Navbar() {
                     <nav className="hidden md:flex items-center gap-8">
                         {navItems.map((item) => (
                             <a
-                                key={item.href}
+                                key={item.label}
                                 href={item.href}
                                 className="text-sm font-body font-medium hover:text-primary transition-colors relative group"
                             >
@@ -134,7 +134,7 @@ export default function Navbar() {
                             <nav className="space-y-2">
                                 {navItems.map((item) => (
                                     <a
-                                        key={item.href}
+                                        key={item.label}
                                         href={item.href}
                                         onClick={() => setIsMenuOpen(false)}
                                         className="block py-3 text-sm font-body font-medium hover:text-primary transition-colors border-b border-border/30 last:border-b-0"

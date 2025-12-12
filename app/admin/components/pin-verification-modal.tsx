@@ -37,6 +37,7 @@ export function PinVerificationModal({ isOpen, onClose, onSuccess }: PinVerifica
             if (response.ok) {
                 toast.success('PIN verified successfully!')
                 localStorage.setItem('admin_authorized', 'true')
+                localStorage.setItem('admin_auth_time', Date.now().toString())
                 onSuccess()
                 onClose()
             } else {
