@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2, Shield } from 'lucide-react'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -18,6 +18,17 @@ export function PinVerificationModal({ isOpen, onClose, onSuccess }: PinVerifica
     const [pin, setPin] = useState('')
     const [isLoading, setIsLoading] = useState(false)
     const router = useRouter()
+
+    useEffect(() => {
+        const handleAuthChange = () => {
+            console.log('Auth changed, resetting admin authorization')
+            localStorage.removeItem('admin_authorized')
+            localStorage.removeItem('admin_auth_time')
+        }
+
+        window.addEventListener('auth-change', handleAuthChange)
+        return () => window.removeEventListener('auth-change', handleAuthChange)
+    }, [])
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()

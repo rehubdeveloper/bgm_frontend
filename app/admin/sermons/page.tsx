@@ -189,26 +189,47 @@ export default function SermonsManagement() {
         setIsViewDialogOpen(true)
     }
 
-    const getFullAudioUrl = (audioPath: string) => {
-        console.log('🔗 Converting audio path to full URL:', audioPath)
+    const handleDeleteSermon = async (sermonId: number) => {
+        try {
+            setIsDeleting(true)
+            setSubmitError("")
 
-        // If it's already a full URL, return as is
-        if (audioPath.startsWith('http://') || audioPath.startsWith('https://')) {
-            console.log('✅ Audio path is already a full URL, returning as-is')
-            return audioPath
+            const token = localStorage.getItem('access_token')
+            if (!token) {
+                setSubmitError('Authentication required')
+                return
+            }
+
+            const response = await fetch(`/api/contents/sermons/${sermonId}/`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            })
+
+            if (response.ok) {
+                // Remove the sermon from the local state
+                setSermons(sermons.filter(sermon => sermon.id !== sermonId))
+                setSubmitSuccess("Sermon deleted successfully!")
+                setTimeout(() => setSubmitSuccess(""), 3000)
+            } else {
+                if (response.status === 401) {
+                    localStorage.removeItem('access_token')
+                    window.location.href = '/login'
+                    return
+                }
+                const errorData = await response.json()
+                setSubmitError(errorData.error || `Failed to delete sermon (${response.status})`)
+            }
+        } catch (error) {
+            console.error('Error deleting sermon:', error)
+            setSubmitError('Network error occurred')
+        } finally {
+            setIsDeleting(false)
         }
-
-        // Otherwise, prepend the API base URL (remove /api for media URLs)
-        const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://localhost:8000/api'
-        console.log('🏠 API Base URL from env:', apiBaseUrl)
-        const mediaBaseUrl = apiBaseUrl.replace('/api', '')
-        console.log('🎵 Media base URL (removed /api):', mediaBaseUrl)
-
-        const fullUrl = `${mediaBaseUrl}${audioPath}`
-        console.log('🎯 Final audio URL constructed:', fullUrl)
-
-        return fullUrl
     }
+
+
 
     const playNextSermon = (currentSermonId: number, autoStop: boolean = false) => {
         console.log('⏭️ Play Next button clicked for sermon ID:', currentSermonId)
@@ -236,18 +257,29 @@ export default function SermonsManagement() {
         console.log('🎵 Next sermon:', nextSermon.title, `(ID: ${nextSermon.id})`)
 
         if (nextSermon.audio) {
-            console.log('✅ Next sermon has audio, playing...')
+            // Check if it's actually an audio file (not image like .jpeg, .png)
+            const isValidAudio = !nextSermon.audio.includes('.jpeg') &&
+                !nextSermon.audio.includes('.jpg') &&
+                !nextSermon.audio.includes('.png');
 
-            // If autoStop is true, we want to immediately stop any current playback
-            // before starting the next one to avoid the AbortError
-            if (autoStop && audioRef.current) {
-                console.log('⏸️ Stopping current audio before playing next')
-                audioRef.current.pause()
-                audioRef.current.currentTime = 0
-                audioRef.current.src = '' // Clear the source
+            if (isValidAudio) {
+                console.log('✅ Next sermon has valid audio, playing...')
+
+                // If autoStop is true, we want to immediately stop any current playback
+                // before starting the next one to avoid the AbortError
+                if (autoStop && audioRef.current) {
+                    console.log('⏸️ Stopping current audio before playing next')
+                    audioRef.current.pause()
+                    audioRef.current.currentTime = 0
+                    audioRef.current.src = '' // Clear the source
+                }
+
+                togglePlay(nextSermon.id!, nextSermon.audio!)
+            } else {
+                console.log('⚠️ Next sermon has invalid audio (image file), skipping:', nextSermon.audio)
+                // Skip this sermon, continue to next one via timeout to avoid infinite loops
+                setTimeout(() => playNextSermon(nextSermon.id!, false), 100)
             }
-
-            togglePlay(nextSermon.id!, nextSermon.audio!)
         } else {
             console.log('❌ Next sermon has no audio, skipping')
         }
@@ -256,78 +288,67 @@ export default function SermonsManagement() {
     const togglePlay = async (sermonId: number, audioUrl: string) => {
         console.log('🎶 Toggle play called for sermon ID:', sermonId, 'with audio URL:', audioUrl)
 
-        const fullUrl = getFullAudioUrl(audioUrl)
-        console.log('🎵 Will attempt to play:', fullUrl)
-
         if (playingSermonId === sermonId) {
             console.log('⏸️ Same sermon already playing, pausing...')
-            // Stop current audio
+            // Stop current audio completely
             if (audioRef.current) {
-                console.log('🎵 Pausing current audio')
+                console.log('🎵 Stopping current audio')
                 audioRef.current.pause()
                 audioRef.current.currentTime = 0
+                audioRef.current.src = '' // Clear source
+                // Reset all event listeners
+                audioRef.current.onended = null
+                audioRef.current.onerror = null
             }
             setPlayingSermonId(null)
-            console.log('🏁 Set playing sermon ID to null')
+            console.log('� Set playing sermon ID to null')
         } else {
             console.log('▶️ Playing new sermon...')
-            // Play new audio
-            if (audioRef.current) {
-                console.log('🔄 Reusing existing audio element')
-                audioRef.current.src = fullUrl
-                console.log('🔗 Set audio src to:', fullUrl)
 
-                audioRef.current.play()
-                    .then(() => {
-                        console.log('✅ Audio started playing successfully')
-                        setPlayingSermonId(sermonId)
-                        console.log('🏷️ Set playing sermon ID to:', sermonId)
-                    })
-                    .catch(e => {
-                        console.error('❌ Error playing audio:', e)
-                        setSubmitError('Error playing audio')
-                    })
-            } else {
-                console.log('🆕 Creating new audio element')
-                // Create audio element if it doesn't exist
-                const audio = new Audio(fullUrl)
-                console.log('🎵 Created new Audio object with src:', fullUrl)
-                audioRef.current = audio
+            // Always create a fresh Audio element to avoid AbortError
+            // Existing audio elements can retain pending play requests
+            console.log('🆕 Creating fresh audio element for:', sermonId)
+            const newAudio = new Audio(audioUrl)
+            console.log('🎵 Created new Audio object with src:', audioUrl)
 
-                audio.onended = () => {
-                    console.log('🏁 Audio finished playing')
-                    setPlayingSermonId(null)
-                    console.log('♻️ Auto-playing next sermon in loop...')
-                    // Auto-play next sermon in a loop
-                    const playNext = () => {
-                        const currentIndex = sermons.findIndex(s => s.id === sermonId)
-                        const nextIndex = (currentIndex + 1) % sermons.length
-                        console.log('🔄 Auto-next from index', currentIndex, 'to', nextIndex)
-                        const nextSermon = sermons[nextIndex]
-                        if (nextSermon.audio) {
-                            console.log('🎵 Auto-playing sermon:', nextSermon.title)
-                            togglePlay(nextSermon.id!, nextSermon.audio!)
-                        }
-                    }
-                    playNext()
-                }
-
-                audio.onerror = () => {
-                    console.error('💥 Error loading audio')
-                    setPlayingSermonId(null)
-                    setSubmitError('Error loading audio')
-                }
-
-                audio.play()
-                    .then(() => {
-                        console.log('🎉 New audio started successfully')
-                        setPlayingSermonId(sermonId)
-                    })
-                    .catch(e => {
-                        console.error('💥 Error playing new audio:', e)
-                        setSubmitError('Error playing audio')
-                    })
+            // Set up event handlers BEFORE playing
+            newAudio.onended = () => {
+                console.log('🏁 Audio finished playing for ID:', sermonId)
+                console.log('♻️ Auto-playing next sermon in loop')
+                setTimeout(() => {
+                    console.log('⏯️ Starting auto-play for sermon that just finished:', sermonId)
+                    playNextSermon(sermonId, false)
+                }, 1000) // 1 second delay before next
             }
+
+            newAudio.onerror = () => {
+                console.error('💥 Error loading audio')
+                setPlayingSermonId(null)
+                setSubmitError('Error loading audio')
+            }
+
+            // Clean up old audio element
+            if (audioRef.current) {
+                console.log('🗑️ Cleaning up old audio element')
+                audioRef.current.pause()
+                audioRef.current.src = ''
+                audioRef.current = null
+            }
+
+            // Set the new audio as current
+            audioRef.current = newAudio
+
+            // Now play the audio
+            newAudio.play()
+                .then(() => {
+                    console.log('🎉 New audio started successfully')
+                    setPlayingSermonId(sermonId)
+                    console.log('🏷️ Set playing sermon ID to:', sermonId)
+                })
+                .catch(e => {
+                    console.error('💥 Error playing new audio:', e)
+                    setSubmitError('Error playing audio')
+                })
         }
     }
 
@@ -558,15 +579,44 @@ export default function SermonsManagement() {
                                                         >
                                                             <SkipForward className="w-4 h-4 text-primary" />
                                                         </button>
-                                                        <button
-                                                            onClick={() => handleViewSermon(sermon)}
-                                                            className="p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer"
-                                                            title="View details"
-                                                        >
-                                                            <Info className="w-4 h-4 text-primary" />
-                                                        </button>
                                                     </>
                                                 )}
+                                                <button
+                                                    onClick={() => handleViewSermon(sermon)}
+                                                    className="p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer"
+                                                    title="View details"
+                                                >
+                                                    <Info className="w-4 h-4 text-primary" />
+                                                </button>
+                                                <AlertDialog>
+                                                    <AlertDialogTrigger asChild>
+                                                        <button
+                                                            disabled={isDeleting}
+                                                            className="p-2 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                                                            title="Delete sermon"
+                                                        >
+                                                            <Trash2 className="w-4 h-4 text-red-500" />
+                                                        </button>
+                                                    </AlertDialogTrigger>
+                                                    <AlertDialogContent>
+                                                        <AlertDialogHeader>
+                                                            <AlertDialogTitle>Delete Sermon</AlertDialogTitle>
+                                                            <AlertDialogDescription>
+                                                                Are you sure you want to delete "{sermon.title}"? This action cannot be undone and will permanently remove the sermon from the system.
+                                                            </AlertDialogDescription>
+                                                        </AlertDialogHeader>
+                                                        <AlertDialogFooter>
+                                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                            <AlertDialogAction
+                                                                onClick={() => handleDeleteSermon(sermon.id!)}
+                                                                className="bg-red-600 hover:bg-red-700"
+                                                                disabled={isDeleting}
+                                                            >
+                                                                {isDeleting ? "Deleting..." : "Delete Sermon"}
+                                                            </AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                </AlertDialog>
                                             </td>
                                         </tr>
                                     ))}
@@ -612,15 +662,44 @@ export default function SermonsManagement() {
                                                         >
                                                             <SkipForward className="w-4 h-4 text-primary" />
                                                         </button>
-                                                        <button
-                                                            onClick={() => handleViewSermon(sermon)}
-                                                            className="p-2 hover:bg-muted rounded-lg transition-colors"
-                                                            title="View details"
-                                                        >
-                                                            <Info className="w-4 h-4 text-primary" />
-                                                        </button>
                                                     </>
                                                 )}
+                                                <button
+                                                    onClick={() => handleViewSermon(sermon)}
+                                                    className="p-2 hover:bg-muted rounded-lg transition-colors"
+                                                    title="View details"
+                                                >
+                                                    <Info className="w-4 h-4 text-primary" />
+                                                </button>
+                                                <AlertDialog>
+                                                    <AlertDialogTrigger asChild>
+                                                        <button
+                                                            disabled={isDeleting}
+                                                            className="p-2 hover:bg-red-50 rounded-lg transition-colors"
+                                                            title="Delete sermon"
+                                                        >
+                                                            <Trash2 className="w-4 h-4 text-red-500" />
+                                                        </button>
+                                                    </AlertDialogTrigger>
+                                                    <AlertDialogContent>
+                                                        <AlertDialogHeader>
+                                                            <AlertDialogTitle>Delete Sermon</AlertDialogTitle>
+                                                            <AlertDialogDescription>
+                                                                Are you sure you want to delete "{sermon.title}"? This action cannot be undone and will permanently remove the sermon from the system.
+                                                            </AlertDialogDescription>
+                                                        </AlertDialogHeader>
+                                                        <AlertDialogFooter>
+                                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                            <AlertDialogAction
+                                                                onClick={() => handleDeleteSermon(sermon.id!)}
+                                                                className="bg-red-600 hover:bg-red-700"
+                                                                disabled={isDeleting}
+                                                            >
+                                                                {isDeleting ? "Deleting..." : "Delete Sermon"}
+                                                            </AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                </AlertDialog>
                                             </div>
                                         </div>
 

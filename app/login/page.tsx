@@ -61,9 +61,13 @@ export default function LoginPage() {
 
             if (response.ok && result.access) {
                 setSuccess('Login successful! Redirecting...')
+                console.log('Login successful, access token present, dispatching auth-change')
                 // Store tokens in localStorage
                 localStorage.setItem('access_token', result.access)
                 localStorage.setItem('refresh_token', result.refresh || '')
+
+                // Dispatch event to notify other components of auth change
+                window.dispatchEvent(new CustomEvent('auth-change'))
 
                 form.reset()
                 // Small delay to show success message
@@ -71,6 +75,7 @@ export default function LoginPage() {
                     router.push('/')
                 }, 1000)
             } else {
+                console.log('Login response not ok or no access token:', result)
                 // Handle different error types
                 if (result.detail) {
                     setError(result.detail)
@@ -97,7 +102,7 @@ export default function LoginPage() {
                 {/* BGM Logo/Branding */}
                 <div className="text-center">
                     <div className="mx-auto w-20 h-20 bg-gradient-to-br from-blue-600 to-blue-800 rounded-2xl flex items-center justify-center mb-6 shadow-lg">
-                        <Image src="/BGM.png" alt="BGM Logo" width={40} height={40} />
+                        <Image src="/BGM.png" alt="BGM Logo" width={70} height={70} />
                     </div>
                     <h1 className="text-3xl font-display font-bold text-slate-900 mb-2">
                         Welcome Back

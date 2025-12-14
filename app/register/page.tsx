@@ -176,7 +176,7 @@ export default function RegisterPage() {
                 {/* BGM Logo/Branding */}
                 <div className="text-center">
                     <div className="mx-auto w-20 h-20 bg-gradient-to-br from-blue-600 to-blue-800 rounded-2xl flex items-center justify-center mb-6 shadow-lg">
-                        <Image src="/BGM.png" alt="BGM Logo" width={40} height={40} />
+                        <Image src="/BGM.png" alt="BGM Logo" width={70} height={70} />
                     </div>
                     <h1 className="text-3xl font-display font-bold text-slate-900 mb-2">
                         Join Our Community

@@ -18,35 +18,83 @@ export default function AdminLayout({
   const router = useRouter()
 
   useEffect(() => {
-    const accessToken = localStorage.getItem('access_token')
-
-    if (!accessToken) {
-      // No access token - redirect to login
-      router.replace('/login')
-      return
+    const validateToken = async (token: string) => {
+      try {
+        // Make an authenticated POST request to validate token
+        // Using departments POST which requires authorization
+        const response = await fetch('/api/departments', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ name: '', description: '' }), // Invalid body to trigger validation error if authorized
+        })
+        // If 401, token is invalid; if 400 (validation error), token is valid; other errors treated as invalid
+        return response.status !== 401
+      } catch (error) {
+        console.error('Token validation error:', error)
+        return false
+      }
     }
 
-    // Check if already authorized as admin and session hasn't expired
-    const adminAuthorized = localStorage.getItem('admin_authorized') === 'true'
-    const adminAuthTime = localStorage.getItem('admin_auth_time')
-    const sessionTimeout = 60 * 60 * 1000 // 1 hour in milliseconds
+    const checkAuthorization = async () => {
+      const accessToken = localStorage.getItem('access_token')
 
-    if (adminAuthorized && adminAuthTime) {
-      const authTime = parseInt(adminAuthTime, 10)
-      const now = Date.now()
+      if (!accessToken) {
+        // No access token - redirect to login
+        router.replace('/login')
+        return
+      }
 
-      if (now - authTime < sessionTimeout) {
-        setIsAuthorized(true)
-      } else {
-        // Session expired - clear authorization and require PIN again
+      // Validate token with server
+      const tokenValid = await validateToken(accessToken)
+      console.log('Token validation result:', tokenValid)
+
+      if (!tokenValid) {
+        console.log('🔐 Security: Invalid access token detected, clearing local auth and redirecting to login')
+        // Token invalid - clear everything and redirect to login
+        localStorage.removeItem('access_token')
+        localStorage.removeItem('refresh_token')
         localStorage.removeItem('admin_authorized')
         localStorage.removeItem('admin_auth_time')
+        router.replace('/login')
+        return
+      }
+
+      // Check if already authorized as admin and session hasn't expired
+      const adminAuthorized = localStorage.getItem('admin_authorized') === 'true'
+      const adminAuthTime = localStorage.getItem('admin_auth_time')
+      const sessionTimeout = 30 * 60 * 1000 // 30 minutes (more strict than 1 hour)
+
+      if (adminAuthorized && adminAuthTime) {
+        const authTime = parseInt(adminAuthTime, 10)
+        const now = Date.now()
+
+        if (now - authTime < sessionTimeout) {
+          setIsAuthorized(true)
+        } else {
+          // Session expired - clear authorization and require PIN again
+          localStorage.removeItem('admin_authorized')
+          localStorage.removeItem('admin_auth_time')
+          setIsAuthorized(false)
+          setIsPinModalOpen(true)
+        }
+      } else {
+        // No authorization - show PIN verification modal
+        setIsAuthorized(false)
         setIsPinModalOpen(true)
       }
-    } else {
-      // No authorization - show PIN verification modal
-      setIsPinModalOpen(true)
     }
+
+    checkAuthorization()
+
+    // Run authorization check more frequently for stricter control
+    const interval = setInterval(() => {
+      checkAuthorization()
+    }, 30000) // Check every 30 seconds
+
+    return () => clearInterval(interval)
   }, [router])
 
   const menuItems = [

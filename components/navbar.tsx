@@ -15,21 +15,34 @@ export default function Navbar() {
     useEffect(() => {
         const checkAuth = () => {
             const token = localStorage.getItem('access_token')
+            console.log('Navbar checking auth:', !!token)
             setIsLoggedIn(!!token)
             setCheckingAuth(false)
         }
 
         checkAuth()
 
-        // Listen for storage changes
+        // Listen for storage changes (cross-tab)
         const handleStorageChange = (e: StorageEvent) => {
             if (e.key === 'access_token') {
+                console.log('Storage event, new token value:', !!e.newValue)
                 setIsLoggedIn(!!e.newValue)
             }
         }
 
+        // Listen for same-tab auth changes
+        const handleAuthChange = () => {
+            console.log('Auth-change event received')
+            checkAuth()
+        }
+
         window.addEventListener('storage', handleStorageChange)
-        return () => window.removeEventListener('storage', handleStorageChange)
+        window.addEventListener('auth-change', handleAuthChange)
+
+        return () => {
+            window.removeEventListener('storage', handleStorageChange)
+            window.removeEventListener('auth-change', handleAuthChange)
+        }
     }, [])
 
     const handleLogout = () => {
@@ -37,6 +50,8 @@ export default function Navbar() {
         localStorage.removeItem('refresh_token')
         localStorage.removeItem('admin_authorized')
         setIsLoggedIn(false)
+        // Dispatch event to notify other components of auth change
+        window.dispatchEvent(new CustomEvent('auth-change'))
         window.location.href = '/'
     }
 

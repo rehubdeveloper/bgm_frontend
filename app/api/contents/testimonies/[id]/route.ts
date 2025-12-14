@@ -6,10 +6,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const requestId = Math.random().toString(36).substring(7);
     const { id } = await params;
 
-    console.log(`[${requestId}] 🚀 Starting individual sermon fetch request`);
+    console.log(`[${requestId}] 🚀 Starting individual testimony fetch request`);
     console.log(`[${requestId}] 📍 Request URL: ${request.url}`);
     console.log(`[${requestId}] 📝 Request Method: ${request.method}`);
-    console.log(`[${requestId}] 🆔 Sermon ID: ${id}`);
+    console.log(`[${requestId}] 🆔 Testimony ID: ${id}`);
 
     // Check for authorization header (required for admin content)
     const authHeader = request.headers.get('authorization');
@@ -23,7 +23,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     try {
         // Forward the request to the external API content endpoint
-        const externalApiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/admin-panel/sermons/${id}/`;
+        const externalApiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/admin-panel/testimonies/${id}/`;
         console.log(`[${requestId}] 🌐 Forwarding to external API: ${externalApiUrl}`);
 
         const fetchStartTime = Date.now();
@@ -41,9 +41,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
         let data;
         if (response.status === 404) {
-            console.log(`[${requestId}] ❌ Sermon not found (404) - likely doesn't exist`);
+            console.log(`[${requestId}] ❌ Testimony not found (404) - likely doesn't exist`);
             console.log(`[${requestId}] 📄 Response headers:`, Object.fromEntries(response.headers.entries()));
-            data = { error: 'Sermon not found' };
+            data = { error: 'Testimony not found' };
         } else if (response.status >= 400) {
             // Try to get error details for other client/server errors
             try {
@@ -81,13 +81,13 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         }
 
         const totalDuration = Date.now() - startTime;
-        console.log(`[${requestId}] ✅ Individual sermon fetch completed successfully in ${totalDuration}ms`);
+        console.log(`[${requestId}] ✅ Individual testimony fetch completed successfully in ${totalDuration}ms`);
         console.log(`[${requestId}] 🎯 Returning response with status: ${response.status}`);
 
         return NextResponse.json(data, { status: response.status });
     } catch (error) {
         const totalDuration = Date.now() - startTime;
-        console.error(`[${requestId}] 💥 Individual sermon fetch error after ${totalDuration}ms:`, error);
+        console.error(`[${requestId}] 💥 Individual testimony fetch error after ${totalDuration}ms:`, error);
 
         const errorDetails = error instanceof Error ? {
             name: error.name,
@@ -109,10 +109,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const requestId = Math.random().toString(36).substring(7);
     const { id } = await params;
 
-    console.log(`[${requestId}] 🚀 Starting sermon update (PUT) request`);
+    console.log(`[${requestId}] 🚀 Starting testimony update (PUT) request`);
     console.log(`[${requestId}] 📍 Request URL: ${request.url}`);
     console.log(`[${requestId}] 📝 Request Method: ${request.method}`);
-    console.log(`[${requestId}] 🆔 Sermon ID: ${id}`);
+    console.log(`[${requestId}] 🆔 Testimony ID: ${id}`);
 
     // Check for authorization header
     const authHeader = request.headers.get('authorization');
@@ -130,7 +130,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         console.log(`[${requestId}] 📋 Received body:`, JSON.stringify(body, null, 2));
 
         // Forward the request to the external API
-        const externalApiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/admin-panel/sermons/${id}/`;
+        const externalApiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/admin-panel/testimonies/${id}/`;
         console.log(`[${requestId}] 🌐 Forwarding to external API: ${externalApiUrl}`);
 
         const fetchStartTime = Date.now();
@@ -159,13 +159,13 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         }
 
         const totalDuration = Date.now() - startTime;
-        console.log(`[${requestId}] ✅ Sermon update completed successfully in ${totalDuration}ms`);
+        console.log(`[${requestId}] ✅ Testimony update completed successfully in ${totalDuration}ms`);
         console.log(`[${requestId}] 🎯 Returning response with status: ${response.status}`);
 
         return NextResponse.json(data, { status: response.status });
     } catch (error) {
         const totalDuration = Date.now() - startTime;
-        console.error(`[${requestId}] 💥 Sermon update error after ${totalDuration}ms:`, error);
+        console.error(`[${requestId}] 💥 Testimony update error after ${totalDuration}ms:`, error);
 
         const errorDetails = error instanceof Error ? {
             name: error.name,
@@ -187,10 +187,10 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const requestId = Math.random().toString(36).substring(7);
     const { id } = await params;
 
-    console.log(`[${requestId}] 🚀 Starting sermon partial update (PATCH) request`);
+    console.log(`[${requestId}] 🚀 Starting testimony partial update (PATCH) request`);
     console.log(`[${requestId}] 📍 Request URL: ${request.url}`);
     console.log(`[${requestId}] 📝 Request Method: ${request.method}`);
-    console.log(`[${requestId}] 🆔 Sermon ID: ${id}`);
+    console.log(`[${requestId}] 🆔 Testimony ID: ${id}`);
 
     // Check for authorization header
     const authHeader = request.headers.get('authorization');
@@ -208,7 +208,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         console.log(`[${requestId}] 📋 Received body:`, JSON.stringify(body, null, 2));
 
         // Forward the request to the external API
-        const externalApiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/admin-panel/sermons/${id}/`;
+        const externalApiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/admin-panel/testimonies/${id}/`;
         console.log(`[${requestId}] 🌐 Forwarding to external API: ${externalApiUrl}`);
 
         const fetchStartTime = Date.now();
@@ -237,13 +237,13 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         }
 
         const totalDuration = Date.now() - startTime;
-        console.log(`[${requestId}] ✅ Sermon partial update completed successfully in ${totalDuration}ms`);
+        console.log(`[${requestId}] ✅ Testimony partial update completed successfully in ${totalDuration}ms`);
         console.log(`[${requestId}] 🎯 Returning response with status: ${response.status}`);
 
         return NextResponse.json(data, { status: response.status });
     } catch (error) {
         const totalDuration = Date.now() - startTime;
-        console.error(`[${requestId}] 💥 Sermon partial update error after ${totalDuration}ms:`, error);
+        console.error(`[${requestId}] 💥 Testimony partial update error after ${totalDuration}ms:`, error);
 
         const errorDetails = error instanceof Error ? {
             name: error.name,
@@ -265,10 +265,10 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     const requestId = Math.random().toString(36).substring(7);
     const { id } = await params;
 
-    console.log(`[${requestId}] 🚀 Starting sermon deletion request`);
+    console.log(`[${requestId}] 🚀 Starting testimony deletion request`);
     console.log(`[${requestId}] 📍 Request URL: ${request.url}`);
     console.log(`[${requestId}] 📝 Request Method: ${request.method}`);
-    console.log(`[${requestId}] 🆔 Sermon ID: ${id}`);
+    console.log(`[${requestId}] 🆔 Testimony ID: ${id}`);
 
     // Check for authorization header
     const authHeader = request.headers.get('authorization');
@@ -282,7 +282,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
 
     try {
         // Forward the request to the external API
-        const externalApiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/admin-panel/sermons/${id}/`;
+        const externalApiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/admin-panel/testimonies/${id}/`;
         console.log(`[${requestId}] 🌐 Forwarding to external API: ${externalApiUrl}`);
 
         const fetchStartTime = Date.now();
@@ -301,15 +301,15 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
         if (response.status === 204) {
             // No content response - successful deletion
             const totalDuration = Date.now() - startTime;
-            console.log(`[${requestId}] ✅ Sermon deletion completed successfully in ${totalDuration}ms`);
+            console.log(`[${requestId}] ✅ Testimony deletion completed successfully in ${totalDuration}ms`);
             console.log(`[${requestId}] 🎯 Returning success response`);
 
             return NextResponse.json({ success: true }, { status: 200 });
         } else if (response.status === 404) {
-            // Sermon not found
-            console.log(`[${requestId}] ❌ Sermon not found (404)`);
+            // Testimony not found
+            console.log(`[${requestId}] ❌ Testimony not found (404)`);
             return NextResponse.json(
-                { error: 'Sermon not found' },
+                { error: 'Testimony not found' },
                 { status: 404 }
             );
         } else if (response.status >= 400) {
@@ -332,20 +332,20 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
             }
 
             const totalDuration = Date.now() - startTime;
-            console.log(`[${requestId}] ❌ Sermon deletion failed with status ${response.status} in ${totalDuration}ms`);
+            console.log(`[${requestId}] ❌ Testimony deletion failed with status ${response.status} in ${totalDuration}ms`);
             return NextResponse.json(data, { status: response.status });
         } else {
             // Unexpected success response
             const totalDuration = Date.now() - startTime;
             console.log(`[${requestId}] ❓ Unexpected success response for DELETE: ${response.status} in ${totalDuration}ms`);
             return NextResponse.json(
-                { success: true, message: 'Sermon deletion completed' },
+                { success: true, message: 'Testimony deletion completed' },
                 { status: 200 }
             );
         }
     } catch (error) {
         const totalDuration = Date.now() - startTime;
-        console.error(`[${requestId}] 💥 Sermon deletion error after ${totalDuration}ms:`, error);
+        console.error(`[${requestId}] 💥 Testimony deletion error after ${totalDuration}ms:`, error);
 
         const errorDetails = error instanceof Error ? {
             name: error.name,
