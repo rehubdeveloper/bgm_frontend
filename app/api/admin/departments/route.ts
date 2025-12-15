@@ -5,11 +5,11 @@ export async function GET(request: NextRequest) {
     const startTime = Date.now();
     const requestId = Math.random().toString(36).substring(7);
 
-    console.log(`[${requestId}] 🚀 Starting devotionals fetch request`);
+    console.log(`[${requestId}] 🚀 Starting admin departments fetch request`);
     console.log(`[${requestId}] 📍 Request URL: ${request.url}`);
     console.log(`[${requestId}] 📝 Request Method: ${request.method}`);
 
-    // Check for authorization header (required for admin content)
+    // Check for authorization header
     const authHeader = request.headers.get('authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
         console.log(`[${requestId}] ❌ No authorization header provided`);
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
 
     try {
         // Forward the request to the external API admin panel endpoint
-        const externalApiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/admin-panel/devotionals/`;
+        const externalApiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/admin-panel/departments/`;
         console.log(`[${requestId}] 🌐 Forwarding to external API: ${externalApiUrl}`);
 
         const fetchStartTime = Date.now();
@@ -49,13 +49,13 @@ export async function GET(request: NextRequest) {
         }
 
         const totalDuration = Date.now() - startTime;
-        console.log(`[${requestId}] ✅ Devotionals fetch completed successfully in ${totalDuration}ms`);
+        console.log(`[${requestId}] ✅ Admin departments fetch completed successfully in ${totalDuration}ms`);
         console.log(`[${requestId}] 🎯 Returning response with status: ${response.status}`);
 
         return NextResponse.json(data, { status: response.status });
     } catch (error) {
         const totalDuration = Date.now() - startTime;
-        console.error(`[${requestId}] 💥 Devotionals fetch error after ${totalDuration}ms:`, error);
+        console.error(`[${requestId}] 💥 Admin departments fetch error after ${totalDuration}ms:`, error);
 
         const errorDetails = error instanceof Error ? {
             name: error.name,
@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
     const startTime = Date.now();
     const requestId = Math.random().toString(36).substring(7);
 
-    console.log(`[${requestId}] 🚀 Starting devotional creation request`);
+    console.log(`[${requestId}] 🚀 Starting admin department creation request`);
     console.log(`[${requestId}] 📍 Request URL: ${request.url}`);
     console.log(`[${requestId}] 📝 Request Method: ${request.method}`);
 
@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
 
         // Validate required fields
         console.log(`[${requestId}] ✅ Validating required fields...`);
-        const requiredFields = ['title', 'bible_verse', 'reflection', 'prayer', 'application_tip', 'closing_thought'];
+        const requiredFields = ['name', 'description'];
 
         for (const field of requiredFields) {
             if (body[field] === undefined || body[field] === null || body[field] === '') {
@@ -109,11 +109,19 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        console.log(`[${requestId}] ✅ Validation passed for all required fields`);
+        // Handle optional leader field
+        if (body.leader !== undefined && body.leader !== null && body.leader !== '') {
+            body.leader = parseInt(body.leader);
+        } else {
+            body.leader = null; // or omit it entirely
+        }
+
+        console.log(`[${requestId}] ✅ Validation passed for fields: ${requiredFields.join(', ')}`);
 
         // Forward the request to the external API admin panel endpoint
-        const externalApiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/admin-panel/devotionals/`;
+        const externalApiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/admin-panel/departments/`;
         console.log(`[${requestId}] 🌐 Forwarding to external API: ${externalApiUrl}`);
+        console.log(`[${requestId}] 📤 Sending payload:`, JSON.stringify(body, null, 2));
 
         const fetchStartTime = Date.now();
         const response = await fetch(externalApiUrl, {
@@ -141,13 +149,13 @@ export async function POST(request: NextRequest) {
         }
 
         const totalDuration = Date.now() - startTime;
-        console.log(`[${requestId}] ✅ Devotional creation completed successfully in ${totalDuration}ms`);
+        console.log(`[${requestId}] ✅ Admin department creation completed successfully in ${totalDuration}ms`);
         console.log(`[${requestId}] 🎯 Returning response with status: ${response.status}`);
 
         return NextResponse.json(data, { status: response.status });
     } catch (error) {
         const totalDuration = Date.now() - startTime;
-        console.error(`[${requestId}] 💥 Devotional creation error after ${totalDuration}ms:`, error);
+        console.error(`[${requestId}] 💥 Admin department creation error after ${totalDuration}ms:`, error);
 
         const errorDetails = error instanceof Error ? {
             name: error.name,

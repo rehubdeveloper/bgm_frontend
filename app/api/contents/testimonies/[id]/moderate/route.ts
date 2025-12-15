@@ -1,10 +1,10 @@
 // @ts-ignore: 'next/server' types may not be available in this environment
 import { NextRequest, NextResponse } from 'next/server';
 
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     const startTime = Date.now();
     const requestId = Math.random().toString(36).substring(7);
-    const testimonyId = params.id;
+    const { id: testimonyId } = await params;
 
     console.log(`[${requestId}] 🚀 Starting testimony moderation request for ID: ${testimonyId}`);
     console.log(`[${requestId}] 📍 Request URL: ${request.url}`);
@@ -46,33 +46,43 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 
         console.log(`[${requestId}] ✅ Validation passed. Action: ${action}`);
 
-        // Forward the request to the external API moderation endpoint
-        const externalApiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/contents/testimonies/${testimonyId}/moderate/`;
+        // Forward the request to the external API admin-panel endpoint
+        const actionPath = action === 'approve' ? 'approve' : 'reject';
+        const externalApiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/admin-panel/testimonies/${testimonyId}/${actionPath}/`;
         console.log(`[${requestId}] 🌐 Forwarding to external API: ${externalApiUrl}`);
 
         const fetchStartTime = Date.now();
         const response = await fetch(externalApiUrl, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
                 'Authorization': authHeader,
             },
-            body: JSON.stringify({ action }),
         });
 
         const fetchDuration = Date.now() - fetchStartTime;
         console.log(`[${requestId}] ⏱️ External API request took ${fetchDuration}ms`);
         console.log(`[${requestId}] 📊 External API response status: ${response.status} ${response.statusText}`);
 
+        // Handle response based on status (approve/reject endpoints return no body on success)
+        if (response.status === 200) {
+            console.log(`[${requestId}] ✅ Testimony ${action} completed successfully (no response body expected)`);
+            const totalDuration = Date.now() - startTime;
+            console.log(`[${requestId}] 🎯 Returning success response in ${totalDuration}ms`);
+
+            return NextResponse.json({ success: true, action }, { status: 200 });
+        }
+
+        // Handle error responses
         let data;
         try {
-            console.log(`[${requestId}] 📥 Parsing external API response...`);
+            console.log(`[${requestId}] 📥 Parsing external API error response...`);
             data = await response.json();
-            console.log(`[${requestId}] 📋 External API response data:`, JSON.stringify(data, null, 2));
+            console.log(`[${requestId}] 📋 External API error data:`, JSON.stringify(data, null, 2));
         } catch (parseError) {
-            console.log(`[${requestId}] ❌ Failed to parse external API response as JSON:`, parseError);
-            console.log(`[${requestId}] 📄 Raw response text:`, await response.text());
-            data = { error: 'Invalid response from external API' };
+            console.log(`[${requestId}] ❌ Failed to parse external API error response as JSON:`, parseError);
+            const rawText = await response.text();
+            console.log(`[${requestId}] 📄 Raw error response text:`, rawText);
+            data = { error: 'Invalid error response from external API' };
         }
 
         const totalDuration = Date.now() - startTime;

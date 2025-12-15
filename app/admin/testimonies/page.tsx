@@ -28,13 +28,31 @@ export default function TestimoniesManagement() {
   const [submitSuccess, setSubmitSuccess] = useState("")
   const [selectedTestimony, setSelectedTestimony] = useState<Testimony | null>(null)
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [editFormData, setEditFormData] = useState({
+    text: "",
+    image: "",
+    video: "",
+    status: "pending"
+  })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [activeTab, setActiveTab] = useState("all")
+  const [loadingActions, setLoadingActions] = useState<Set<number>>(new Set())
 
   useEffect(() => {
     console.log('🗣️ Testimonies admin component mounted, fetching testimonies...')
     fetchTestimonies()
   }, [])
+
+  // Auto-clear error after 5 seconds
+  useEffect(() => {
+    if (submitError) {
+      const timer = setTimeout(() => {
+        setSubmitError("")
+      }, 5000)
+      return () => clearTimeout(timer)
+    }
+  }, [submitError])
 
   const fetchTestimonies = async () => {
     console.log('🚀 Starting testimonies fetch...')
@@ -100,6 +118,75 @@ export default function TestimoniesManagement() {
     setIsViewDialogOpen(true)
   }
 
+  const handleEditTestimony = (testimony: Testimony) => {
+    setSelectedTestimony(testimony)
+    setEditFormData({
+      text: testimony.text,
+      image: testimony.image || "",
+      video: testimony.video || "",
+      status: testimony.approved ? "approved" : "pending"
+    })
+    setIsEditDialogOpen(true)
+  }
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedTestimony) return
+
+    setIsSubmitting(true)
+    setSubmitError("")
+
+    try {
+      const token = localStorage.getItem('access_token')
+      if (!token) {
+        setSubmitError('Authentication required')
+        return
+      }
+
+      const updateData = {
+        text: editFormData.text,
+        image: editFormData.image || undefined,
+        video: editFormData.video || undefined,
+        status: editFormData.status
+      }
+
+      const response = await fetch(`/api/contents/testimonies/${selectedTestimony.id}/`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(updateData),
+      })
+
+      if (response.ok) {
+        const updatedTestimony = await response.json()
+        console.log('✅ Testimony updated successfully:', updatedTestimony)
+
+        // Update local state
+        setTestimonies(prevTestimonies =>
+          prevTestimonies.map(testimony =>
+            testimony.id === selectedTestimony.id
+              ? { ...testimony, ...updateData, approved: updateData.status === "approved" }
+              : testimony
+          )
+        )
+
+        setSubmitSuccess("Testimony updated successfully!")
+        setTimeout(() => setSubmitSuccess(""), 3000)
+        setIsEditDialogOpen(false)
+      } else {
+        const errorData = await response.json()
+        setSubmitError(errorData.error || `Failed to update testimony (${response.status})`)
+      }
+    } catch (error) {
+      console.error('Error updating testimony:', error)
+      setSubmitError('Network error occurred')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   const getMediaUrl = (mediaPath: string) => {
     // If it's already a full URL, return as is
     if (mediaPath.startsWith('http://') || mediaPath.startsWith('https://')) {
@@ -113,7 +200,8 @@ export default function TestimoniesManagement() {
   const moderateTestimony = async (testimonyId: number, action: "approve" | "reject") => {
     console.log(`⚖️ Moderating testimony ${testimonyId} with action: ${action}`)
     try {
-      setIsSubmitting(true)
+      // Add loading state for specific testimony
+      setLoadingActions(prev => new Set(prev).add(testimonyId))
 
       const token = localStorage.getItem('access_token')
       if (!token) {
@@ -142,8 +230,16 @@ export default function TestimoniesManagement() {
           )
         )
 
+        // Remove the approve/reject buttons by setting approved status
+        setTestimonies(prevTestimonies =>
+          prevTestimonies.map(testimony =>
+            testimony.id === testimonyId
+              ? { ...testimony, approved: action === 'approve' }
+              : testimony
+          )
+        )
+
         setSubmitSuccess(`Testimony ${action}d successfully!`)
-        setTimeout(() => setSubmitSuccess(""), 3000)
       } else {
         const errorData = await response.json()
         setSubmitError(errorData.error || `Failed to ${action} testimony`)
@@ -152,7 +248,12 @@ export default function TestimoniesManagement() {
       console.error(`Error moderating testimony:`, error)
       setSubmitError(`Failed to ${action} testimony`)
     } finally {
-      setIsSubmitting(false)
+      // Remove loading state for specific testimony
+      setLoadingActions(prev => {
+        const updated = new Set(prev)
+        updated.delete(testimonyId)
+        return updated
+      })
     }
   }
 
@@ -377,24 +478,40 @@ export default function TestimoniesManagement() {
                             <Eye className="w-4 h-4 text-primary" />
                           </button>
 
+                          <button
+                            onClick={() => handleEditTestimony(testimony)}
+                            className="p-2 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Edit testimony"
+                          >
+                            <Edit className="w-4 h-4 text-blue-600" />
+                          </button>
+
                           {!testimony.approved ? (
                             <>
                               <button
                                 onClick={() => moderateTestimony(testimony.id!, 'approve')}
-                                disabled={isSubmitting}
-                                className="p-2 hover:bg-green-50 rounded-lg transition-colors"
+                                disabled={loadingActions.has(testimony.id!)}
+                                className="p-2 hover:bg-green-50 rounded-lg transition-colors relative"
                                 title="Approve testimony"
                               >
-                                <Check className="w-4 h-4 text-green-600" />
+                                {loadingActions.has(testimony.id!) ? (
+                                  <Loader2 className="w-4 h-4 text-green-600 animate-spin" />
+                                ) : (
+                                  <Check className="w-4 h-4 text-green-600" />
+                                )}
                               </button>
                               <AlertDialog>
                                 <AlertDialogTrigger asChild>
                                   <button
-                                    disabled={isSubmitting}
+                                    disabled={loadingActions.has(testimony.id!)}
                                     className="p-2 hover:bg-red-50 rounded-lg transition-colors"
                                     title="Reject testimony"
                                   >
-                                    <X className="w-4 h-4 text-red-600" />
+                                    {loadingActions.has(testimony.id!) ? (
+                                      <Loader2 className="w-4 h-4 text-red-600 animate-spin" />
+                                    ) : (
+                                      <X className="w-4 h-4 text-red-600" />
+                                    )}
                                   </button>
                                 </AlertDialogTrigger>
                                 <AlertDialogContent>
@@ -508,6 +625,14 @@ export default function TestimoniesManagement() {
                             title="View testimony"
                           >
                             <Eye className="w-4 h-4 text-primary" />
+                          </button>
+
+                          <button
+                            onClick={() => handleEditTestimony(testimony)}
+                            className="p-2 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Edit testimony"
+                          >
+                            <Edit className="w-4 h-4 text-blue-600" />
                           </button>
 
                           {!testimony.approved ? (
@@ -707,6 +832,107 @@ export default function TestimoniesManagement() {
                       )}
                     </div>
                   )}
+                </DialogContent>
+              </Dialog>
+
+              {/* Edit Testimony Dialog */}
+              <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+                <DialogContent className="w-[95vw] max-w-[500px] mx-auto p-4 sm:p-6 md:max-h-[85vh] lg:max-h-[80vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle className="text-xl flex items-center gap-3">
+                      <Edit className="w-6 h-6 text-blue-600" />
+                      Edit Testimony
+                    </DialogTitle>
+                  </DialogHeader>
+
+                  <form onSubmit={handleEditSubmit} className="space-y-6">
+                    <div className="space-y-3">
+                      <Label htmlFor="edit-text" className="text-base font-semibold">Testimony Text *</Label>
+                      <Textarea
+                        id="edit-text"
+                        value={editFormData.text}
+                        onChange={(e) => setEditFormData({ ...editFormData, text: e.target.value })}
+                        placeholder="Edit the testimony text..."
+                        className="text-base min-h-[140px] resize-none"
+                        required
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                      <div className="space-y-3">
+                        <Label htmlFor="edit-image" className="text-base font-medium">Image URL (optional)</Label>
+                        <Input
+                          id="edit-image"
+                          type="url"
+                          value={editFormData.image}
+                          onChange={(e) => setEditFormData({ ...editFormData, image: e.target.value })}
+                          placeholder="https://example.com/image.jpg"
+                          className="text-base"
+                        />
+                        <p className="text-xs text-muted-foreground leading-relaxed">
+                          Leave empty to remove current image
+                        </p>
+                      </div>
+
+                      <div className="space-y-3">
+                        <Label htmlFor="edit-video" className="text-base font-medium">Video URL (optional)</Label>
+                        <Input
+                          id="edit-video"
+                          type="url"
+                          value={editFormData.video}
+                          onChange={(e) => setEditFormData({ ...editFormData, video: e.target.value })}
+                          placeholder="https://example.com/video.mp4"
+                          className="text-base"
+                        />
+                        <p className="text-xs text-muted-foreground leading-relaxed">
+                          Leave empty to remove current video
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <Label htmlFor="edit-status" className="text-base font-semibold">Status</Label>
+                      <select
+                        id="edit-status"
+                        value={editFormData.status}
+                        onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value })}
+                        className="w-full px-3 py-3 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 text-base"
+                      >
+                        <option value="pending">⏳ Pending Review</option>
+                        <option value="approved">✅ Approved</option>
+                      </select>
+                    </div>
+
+                    <div className="pt-6 border-t border-border">
+                      <div className="flex flex-col-reverse xs:flex-row xs:justify-end gap-3">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setIsEditDialogOpen(false)}
+                          className="w-full xs:w-auto h-11 text-base font-medium"
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          type="submit"
+                          disabled={isSubmitting}
+                          className="w-full xs:w-auto h-11 text-base font-semibold"
+                        >
+                          {isSubmitting ? (
+                            <>
+                              <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                              Updating...
+                            </>
+                          ) : (
+                            <>
+                              <Edit className="w-5 h-5 mr-2" />
+                              Update Testimony
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  </form>
                 </DialogContent>
               </Dialog>
             </>

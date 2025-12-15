@@ -14,9 +14,9 @@ import { Plus, Mic, Loader2, CheckCircle, AlertCircle, Edit, Trash2, Play, Pause
 interface Sermon {
     id: number;
     title: string;
-    preacher: string;
-    audio: string; // URL to audio file
-    description: string;
+    preacher?: string;
+    audio?: string; // URL to audio file
+    description?: string;
     created_at: string;
 }
 
@@ -27,11 +27,16 @@ export default function SermonsManagement() {
     const [isViewDialogOpen, setIsViewDialogOpen] = useState(false)
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
     const [selectedSermon, setSelectedSermon] = useState<Sermon | null>(null)
-    const [editingSermon, setEditingSermon] = useState<Sermon | null>(null)
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [isDeleting, setIsDeleting] = useState(false)
     const [submitError, setSubmitError] = useState("")
     const [submitSuccess, setSubmitSuccess] = useState("")
+    const [editFormData, setEditFormData] = useState({
+        title: "",
+        preacher: "",
+        description: "",
+        audio: ""
+    })
     const audioRef = useRef<HTMLAudioElement | null>(null)
     const [playingSermonId, setPlayingSermonId] = useState<number | null>(null)
     const [formData, setFormData] = useState({
@@ -187,6 +192,75 @@ export default function SermonsManagement() {
     const handleViewSermon = (sermon: Sermon) => {
         setSelectedSermon(sermon)
         setIsViewDialogOpen(true)
+    }
+
+    const handleEditSermon = (sermon: Sermon) => {
+        setSelectedSermon(sermon)
+        setEditFormData({
+            title: sermon.title,
+            preacher: sermon.preacher || "",
+            description: sermon.description || "",
+            audio: sermon.audio || ""
+        })
+        setIsEditDialogOpen(true)
+    }
+
+    const handleEditSubmit = async (e: React.FormEvent) => {
+        e.preventDefault()
+        if (!selectedSermon) return
+
+        setIsSubmitting(true)
+        setSubmitError("")
+
+        try {
+            const token = localStorage.getItem('access_token')
+            if (!token) {
+                setSubmitError('Authentication required')
+                return
+            }
+
+            const updateData = {
+                title: editFormData.title,
+                preacher: editFormData.preacher || undefined,
+                audio: editFormData.audio || undefined,
+                description: editFormData.description || undefined
+            }
+
+            const response = await fetch(`/api/contents/sermons/${selectedSermon.id}/`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify(updateData),
+            })
+
+            if (response.ok) {
+                const updatedSermon = await response.json()
+                console.log('✅ Sermon updated successfully:', updatedSermon)
+
+                // Update local state
+                setSermons(prevSermons =>
+                    prevSermons.map(sermon =>
+                        sermon.id === selectedSermon.id
+                            ? { ...sermon, ...updateData, created_at: sermon.created_at }
+                            : sermon
+                    )
+                )
+
+                setSubmitSuccess("Sermon updated successfully!")
+                setTimeout(() => setSubmitSuccess(""), 3000)
+                setIsEditDialogOpen(false)
+            } else {
+                const errorData = await response.json()
+                setSubmitError(errorData.error || `Failed to update sermon (${response.status})`)
+            }
+        } catch (error) {
+            console.error('Error updating sermon:', error)
+            setSubmitError('Network error occurred')
+        } finally {
+            setIsSubmitting(false)
+        }
     }
 
     const handleDeleteSermon = async (sermonId: number) => {
@@ -588,6 +662,13 @@ export default function SermonsManagement() {
                                                 >
                                                     <Info className="w-4 h-4 text-primary" />
                                                 </button>
+                                                <button
+                                                    onClick={() => handleEditSermon(sermon)}
+                                                    className="p-2 hover:bg-blue-50 rounded-lg transition-colors"
+                                                    title="Edit sermon"
+                                                >
+                                                    <Edit className="w-4 h-4 text-blue-600" />
+                                                </button>
                                                 <AlertDialog>
                                                     <AlertDialogTrigger asChild>
                                                         <button
@@ -670,6 +751,13 @@ export default function SermonsManagement() {
                                                     title="View details"
                                                 >
                                                     <Info className="w-4 h-4 text-primary" />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleEditSermon(sermon)}
+                                                    className="p-2 hover:bg-blue-50 rounded-lg transition-colors"
+                                                    title="Edit sermon"
+                                                >
+                                                    <Edit className="w-4 h-4 text-blue-600" />
                                                 </button>
                                                 <AlertDialog>
                                                     <AlertDialogTrigger asChild>
@@ -789,6 +877,104 @@ export default function SermonsManagement() {
                                         )}
                                     </div>
                                 )}
+                            </DialogContent>
+                        </Dialog>
+
+                        {/* Edit Sermon Dialog */}
+                        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+                            <DialogContent className="w-[95vw] max-w-[500px] mx-auto p-4 sm:p-6 md:max-h-[85vh] lg:max-h-[80vh] overflow-y-auto">
+                                <DialogHeader>
+                                    <DialogTitle className="text-xl flex items-center gap-3">
+                                        <Mic className="w-6 h-6 text-blue-600" />
+                                        Edit Sermon
+                                    </DialogTitle>
+                                </DialogHeader>
+
+                                <form onSubmit={handleEditSubmit} className="space-y-6">
+                                    <div className="space-y-3">
+                                        <Label htmlFor="edit-title" className="text-base font-semibold">Title *</Label>
+                                        <Input
+                                            id="edit-title"
+                                            value={editFormData.title}
+                                            onChange={(e) => setEditFormData({ ...editFormData, title: e.target.value })}
+                                            placeholder="Edit sermon title..."
+                                            className="text-base"
+                                            required
+                                        />
+                                    </div>
+
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                        <div className="space-y-3">
+                                            <Label htmlFor="edit-preacher" className="text-base font-medium">Preacher (optional)</Label>
+                                            <Input
+                                                id="edit-preacher"
+                                                value={editFormData.preacher}
+                                                onChange={(e) => setEditFormData({ ...editFormData, preacher: e.target.value })}
+                                                placeholder="Enter preacher name..."
+                                                className="text-base"
+                                            />
+                                            <p className="text-xs text-muted-foreground leading-relaxed">
+                                                Leave empty if unknown
+                                            </p>
+                                        </div>
+
+                                        <div className="space-y-3">
+                                            <Label htmlFor="edit-audio" className="text-base font-medium">Audio URL (optional)</Label>
+                                            <Input
+                                                id="edit-audio"
+                                                type="url"
+                                                value={editFormData.audio}
+                                                onChange={(e) => setEditFormData({ ...editFormData, audio: e.target.value })}
+                                                placeholder="https://example.com/audio.mp3"
+                                                className="text-base"
+                                            />
+                                            <p className="text-xs text-muted-foreground leading-relaxed">
+                                                Leave empty to keep current audio
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-3">
+                                        <Label htmlFor="edit-description" className="text-base font-semibold">Description (optional)</Label>
+                                        <Textarea
+                                            id="edit-description"
+                                            value={editFormData.description}
+                                            onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
+                                            placeholder="Brief description of the sermon..."
+                                            className="text-base min-h-[120px] resize-none"
+                                        />
+                                    </div>
+
+                                    <div className="pt-6 border-t border-border">
+                                        <div className="flex flex-col-reverse xs:flex-row xs:justify-end gap-3">
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                onClick={() => setIsEditDialogOpen(false)}
+                                                className="w-full xs:w-auto h-11 text-base font-medium"
+                                            >
+                                                Cancel
+                                            </Button>
+                                            <Button
+                                                type="submit"
+                                                disabled={isSubmitting}
+                                                className="w-full xs:w-auto h-11 text-base font-semibold"
+                                            >
+                                                {isSubmitting ? (
+                                                    <>
+                                                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                                                        Updating...
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Edit className="w-5 h-5 mr-2" />
+                                                        Update Sermon
+                                                    </>
+                                                )}
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </form>
                             </DialogContent>
                         </Dialog>
                     </>

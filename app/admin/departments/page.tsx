@@ -42,7 +42,7 @@ export default function DepartmentsManagement() {
                 return
             }
 
-            const response = await fetch('/api/departments/', {
+            const response = await fetch('/api/admin/departments/', {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -75,15 +75,28 @@ export default function DepartmentsManagement() {
                 return
             }
 
-            const response = await fetch('/api/departments/', {
+            // Validate required fields
+            if (!formData.name.trim()) {
+                console.error('Department name is required')
+                setIsSubmitting(false)
+                return
+            }
+
+            if (!formData.description.trim()) {
+                console.error('Department description is required')
+                setIsSubmitting(false)
+                return
+            }
+
+            const response = await fetch('/api/admin/departments/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`,
                 },
                 body: JSON.stringify({
-                    name: formData.name,
-                    description: formData.description,
+                    name: formData.name.trim(),
+                    description: formData.description.trim(),
                     leader: formData.leader ? parseInt(formData.leader) : null,
                 }),
             })
@@ -204,7 +217,14 @@ export default function DepartmentsManagement() {
                 </Card>
                 <Card className="p-4 glass-card border-2 border-primary/20">
                     <p className="text-muted-foreground text-sm">New This Month</p>
-                    <p className="text-3xl font-display font-bold text-accent mt-2">2</p>
+                    <p className="text-3xl font-display font-bold text-accent mt-2">
+                        {departments_list.filter(department => {
+                            const departmentDate = new Date(department.created_at)
+                            const now = new Date()
+                            return departmentDate.getMonth() === now.getMonth() &&
+                                departmentDate.getFullYear() === now.getFullYear()
+                        }).length}
+                    </p>
                 </Card>
             </div>
 
