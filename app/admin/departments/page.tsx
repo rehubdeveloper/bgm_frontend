@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { useState, useEffect } from "react"
-import { Plus, Eye, Trash2, Loader2 } from "lucide-react"
+import { Plus, Eye, Trash2, Loader2, Edit } from "lucide-react"
 
 interface Department {
     id: number;
@@ -23,8 +23,15 @@ export default function DepartmentsManagement() {
     const [departments_list, setDepartments] = useState<Department[]>([])
     const [loading, setLoading] = useState(true)
     const [isDialogOpen, setIsDialogOpen] = useState(false)
+    const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
     const [isSubmitting, setIsSubmitting] = useState(false)
+    const [editingDepartment, setEditingDepartment] = useState<Department | null>(null)
     const [formData, setFormData] = useState({
+        name: "",
+        description: "",
+        leader: "",
+    })
+    const [editFormData, setEditFormData] = useState({
         name: "",
         description: "",
         leader: "",
@@ -124,6 +131,80 @@ export default function DepartmentsManagement() {
         }
     }
 
+    const handleEdit = (department: Department) => {
+        setEditingDepartment(department)
+        setEditFormData({
+            name: department.name,
+            description: department.description,
+            leader: department.leader ? department.leader.toString() : "",
+        })
+        setIsEditDialogOpen(true)
+    }
+
+    const handleUpdate = async (e: React.FormEvent) => {
+        e.preventDefault()
+        if (!editingDepartment) return
+
+        setIsSubmitting(true)
+
+        try {
+            const token = localStorage.getItem('access_token')
+            if (!token) {
+                console.error('No access token found')
+                return
+            }
+
+            // Validate required fields
+            if (!editFormData.name.trim()) {
+                console.error('Department name is required')
+                setIsSubmitting(false)
+                return
+            }
+
+            if (!editFormData.description.trim()) {
+                console.error('Department description is required')
+                setIsSubmitting(false)
+                return
+            }
+
+            const response = await fetch(`/api/admin/departments/${editingDepartment.id}/`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                    name: editFormData.name.trim(),
+                    description: editFormData.description.trim(),
+                    leader: editFormData.leader ? parseInt(editFormData.leader) : null,
+                }),
+            })
+
+            if (response.ok) {
+                const updatedDepartment = await response.json()
+                setDepartments(departments_list.map(dept =>
+                    dept.id === editingDepartment.id
+                        ? {
+                            ...dept,
+                            name: updatedDepartment.name || editFormData.name,
+                            description: updatedDepartment.description || editFormData.description,
+                            leader: updatedDepartment.leader,
+                            updated_at: updatedDepartment.updated_at || new Date().toISOString(),
+                        }
+                        : dept
+                ))
+                setIsEditDialogOpen(false)
+                setEditingDepartment(null)
+            } else {
+                console.error('Failed to update department')
+            }
+        } catch (error) {
+            console.error('Error updating department:', error)
+        } finally {
+            setIsSubmitting(false)
+        }
+    }
+
     return (
         <div className="space-y-4 md:space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -189,6 +270,65 @@ export default function DepartmentsManagement() {
                                         </>
                                     ) : (
                                         'Create Department'
+                                    )}
+                                </Button>
+                            </div>
+                        </form>
+                    </DialogContent>
+                </Dialog>
+
+                {/* Edit Department Dialog */}
+                <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+                    <DialogContent className="sm:max-w-[425px] mx-4">
+                        <DialogHeader>
+                            <DialogTitle className="text-lg md:text-xl">Edit Department</DialogTitle>
+                        </DialogHeader>
+                        <form onSubmit={handleUpdate} className="space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-name" className="text-sm md:text-base">Department Name</Label>
+                                <Input
+                                    id="edit-name"
+                                    value={editFormData.name}
+                                    onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                                    placeholder="Enter department name"
+                                    required
+                                    className="text-sm md:text-base"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-description" className="text-sm md:text-base">Description</Label>
+                                <Textarea
+                                    id="edit-description"
+                                    value={editFormData.description}
+                                    onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
+                                    placeholder="Enter department description"
+                                    required
+                                    className="text-sm md:text-base min-h-[80px] md:min-h-[100px]"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-leader" className="text-sm md:text-base">Leader ID (Optional)</Label>
+                                <Input
+                                    id="edit-leader"
+                                    type="number"
+                                    value={editFormData.leader}
+                                    onChange={(e) => setEditFormData({ ...editFormData, leader: e.target.value })}
+                                    placeholder="Enter leader ID (optional)"
+                                    className="text-sm md:text-base"
+                                />
+                            </div>
+                            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
+                                <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)} className="w-full sm:w-auto">
+                                    Cancel
+                                </Button>
+                                <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
+                                    {isSubmitting ? (
+                                        <>
+                                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                            Updating...
+                                        </>
+                                    ) : (
+                                        'Update Department'
                                     )}
                                 </Button>
                             </div>
@@ -263,8 +403,11 @@ export default function DepartmentsManagement() {
                                         {new Date(department.created_at).toLocaleDateString()}
                                     </td>
                                     <td className="px-4 py-4 flex items-center justify-center gap-2">
-                                        <button className="p-2 hover:bg-muted rounded-lg transition-colors">
-                                            <Eye className="w-4 h-4 text-primary" />
+                                        <button
+                                            onClick={() => handleEdit(department)}
+                                            className="p-2 hover:bg-muted rounded-lg transition-colors"
+                                        >
+                                            <Edit className="w-4 h-4 text-primary" />
                                         </button>
                                         <button className="p-2 hover:bg-muted rounded-lg transition-colors">
                                             <Trash2 className="w-4 h-4 text-destructive" />
@@ -293,8 +436,11 @@ export default function DepartmentsManagement() {
                                         }}>{department.description}</p>
                                     </div>
                                     <div className="flex gap-2 ml-2">
-                                        <button className="p-2 hover:bg-muted rounded-lg transition-colors">
-                                            <Eye className="w-4 h-4 text-primary" />
+                                        <button
+                                            onClick={() => handleEdit(department)}
+                                            className="p-2 hover:bg-muted rounded-lg transition-colors"
+                                        >
+                                            <Edit className="w-4 h-4 text-primary" />
                                         </button>
                                         <button className="p-2 hover:bg-muted rounded-lg transition-colors">
                                             <Trash2 className="w-4 h-4 text-destructive" />

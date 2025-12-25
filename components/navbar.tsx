@@ -57,9 +57,9 @@ export default function Navbar() {
 
     const navItems = [
         { label: 'Home', href: '/', section: '/' },
-        { label: 'About', href: '/#about', section: 'about' },
-        { label: 'Ministries', href: '/#ministries', section: 'ministries' },
-        { label: 'Contact', href: '/#contact', section: 'contact' },
+        { label: 'About', href: '/about', section: 'about' },
+        { label: 'Giving', href: '/giving', section: 'Giving' },
+        { label: 'Contact', href: '/contact', section: 'contact' },
         { label: 'Watch Live', href: '/', external: true },
     ]
 

@@ -51,7 +51,7 @@ export default function AdminDashboard() {
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="p-6 glass-card border-2 border-primary/20">
+        {/* <Card className="p-6 glass-card border-2 border-primary/20">
           <h2 className="text-xl font-display font-bold text-foreground mb-4">Donations Trend</h2>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={dashboardData}>
@@ -63,7 +63,7 @@ export default function AdminDashboard() {
               <Line type="monotone" dataKey="donations" stroke="var(--primary)" name="Donations (₦)" />
             </LineChart>
           </ResponsiveContainer>
-        </Card>
+        </Card>*/}
 
         <Card className="p-6 glass-card border-2 border-primary/20">
           <h2 className="text-xl font-display font-bold text-foreground mb-4">Members Growth</h2>

@@ -72,7 +72,7 @@ export default function LoginPage() {
                 form.reset()
                 // Small delay to show success message
                 setTimeout(() => {
-                    router.push('/')
+                    router.push('/admin')
                 }, 1000)
             } else {
                 console.log('Login response not ok or no access token:', result)

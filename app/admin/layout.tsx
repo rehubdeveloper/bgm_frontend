@@ -20,18 +20,15 @@ export default function AdminLayout({
   useEffect(() => {
     const validateToken = async (token: string) => {
       try {
-        // Make an authenticated POST request to validate token
-        // Using departments POST which requires authorization
-        const response = await fetch('/api/departments', {
-          method: 'POST',
+        // Make an authenticated GET request to token validation endpoint
+        const response = await fetch('/api/validate-token', {
+          method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ name: '', description: '' }), // Invalid body to trigger validation error if authorized
         })
-        // If 401, token is invalid; if 400 (validation error), token is valid; other errors treated as invalid
-        return response.status !== 401
+        // If 401, token is invalid; if 200, token is valid; other errors treated as invalid
+        return response.status === 200
       } catch (error) {
         console.error('Token validation error:', error)
         return false

@@ -14,10 +14,17 @@ import { useState, useEffect } from "react"
 interface Testimony {
   id: number;
   text: string;
-  image?: string;
-  video?: string;
   member_name: string;
-  approved: boolean;
+  status: "pending" | "approved" | "rejected";
+  rejection_reason?: string;
+  images: Array<{
+    id: number;
+    image: string;
+  }>;
+  videos: Array<{
+    id: number;
+    video: string;
+  }>;
   created_at: string;
 }
 
@@ -31,8 +38,8 @@ export default function TestimoniesManagement() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [editFormData, setEditFormData] = useState({
     text: "",
-    image: "",
-    video: "",
+    image: null as File | null,
+    video: null as File | null,
     status: "pending"
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -101,8 +108,8 @@ export default function TestimoniesManagement() {
   }
 
   const getTestimonyType = (testimony: Testimony) => {
-    if (testimony.video) return "video"
-    if (testimony.image) return "image"
+    if ((testimony.videos?.length || 0) > 0) return "video"
+    if ((testimony.images?.length || 0) > 0) return "image"
     return "text"
   }
 
@@ -122,11 +129,22 @@ export default function TestimoniesManagement() {
     setSelectedTestimony(testimony)
     setEditFormData({
       text: testimony.text,
-      image: testimony.image || "",
-      video: testimony.video || "",
-      status: testimony.approved ? "approved" : "pending"
+      image: null,
+      video: null,
+      status: testimony.status
     })
     setIsEditDialogOpen(true)
+  }
+
+  const handleEditFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'video') => {
+    const file = e.target.files?.[0] || null
+    setEditFormData({ ...editFormData, [type]: file })
+    // Clear the other file type when one is selected
+    if (type === 'image' && file) {
+      setEditFormData(prev => ({ ...prev, video: null }))
+    } else if (type === 'video' && file) {
+      setEditFormData(prev => ({ ...prev, image: null }))
+    }
   }
 
   const handleEditSubmit = async (e: React.FormEvent) => {
@@ -143,20 +161,18 @@ export default function TestimoniesManagement() {
         return
       }
 
-      const updateData = {
-        text: editFormData.text,
-        image: editFormData.image || undefined,
-        video: editFormData.video || undefined,
-        status: editFormData.status
-      }
+      const updateFormData = new FormData()
+      updateFormData.append('text', editFormData.text)
+      updateFormData.append('status', editFormData.status)
+      if (editFormData.image) updateFormData.append('images', editFormData.image)
+      if (editFormData.video) updateFormData.append('videos', editFormData.video)
 
-      const response = await fetch(`/api/contents/testimonies/${selectedTestimony.id}/`, {
-        method: 'PUT',
+      const response = await fetch(`/api/admin-panel/testimonies/${selectedTestimony.id}/`, {
+        method: 'PATCH',
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify(updateData),
+        body: updateFormData,
       })
 
       if (response.ok) {
@@ -167,7 +183,7 @@ export default function TestimoniesManagement() {
         setTestimonies(prevTestimonies =>
           prevTestimonies.map(testimony =>
             testimony.id === selectedTestimony.id
-              ? { ...testimony, ...updateData, approved: updateData.status === "approved" }
+              ? { ...testimony, text: editFormData.text, status: editFormData.status as "pending" | "approved" | "rejected" }
               : testimony
           )
         )
@@ -225,16 +241,7 @@ export default function TestimoniesManagement() {
         setTestimonies(prevTestimonies =>
           prevTestimonies.map(testimony =>
             testimony.id === testimonyId
-              ? { ...testimony, approved: action === 'approve' }
-              : testimony
-          )
-        )
-
-        // Remove the approve/reject buttons by setting approved status
-        setTestimonies(prevTestimonies =>
-          prevTestimonies.map(testimony =>
-            testimony.id === testimonyId
-              ? { ...testimony, approved: action === 'approve' }
+              ? { ...testimony, status: action === 'approve' ? 'approved' : 'rejected' as const }
               : testimony
           )
         )
@@ -268,7 +275,7 @@ export default function TestimoniesManagement() {
         return
       }
 
-      const response = await fetch(`/api/contents/testimonies/${testimonyId}/`, {
+      const response = await fetch(`/api/admin-panel/testimonies/${testimonyId}/`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -301,16 +308,24 @@ export default function TestimoniesManagement() {
   const getFilteredTestimonies = () => {
     switch (activeTab) {
       case "pending":
-        return testimonies.filter(t => !t.approved)
+        return testimonies.filter(t => t.status === "pending")
       case "approved":
-        return testimonies.filter(t => t.approved)
+        return testimonies.filter(t => t.status === "approved")
       default:
         return testimonies
     }
   }
 
-  const getPendingCount = () => testimonies.filter(t => !t.approved).length
-  const getApprovedCount = () => testimonies.filter(t => t.approved).length
+  const getPendingCount = () => testimonies.filter(t => t.status === "pending").length
+  const getApprovedCount = () => testimonies.filter(t => t.status === "approved").length
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes'
+    const k = 1024
+    const sizes = ['Bytes', 'KB', 'MB', 'GB']
+    const i = Math.floor(Math.log(bytes) / Math.log(k))
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+  }
 
   return (
     <div className="space-y-6">
@@ -376,7 +391,7 @@ export default function TestimoniesManagement() {
         <Card className="p-4 glass-card border-2 border-primary/20">
           <p className="text-muted-foreground text-sm">Media Testimonies</p>
           <p className="text-3xl font-display font-bold text-primary mt-2">
-            {testimonies.filter(t => t.image || t.video).length}
+            {testimonies.filter(t => (t.images?.length || 0) > 0 || (t.videos?.length || 0) > 0).length}
           </p>
         </Card>
       </div>
@@ -441,14 +456,19 @@ export default function TestimoniesManagement() {
                           </div>
                         </td>
                         <td className="px-4 py-4">
-                          <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${testimony.approved
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-orange-100 text-orange-800'
+                          <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${testimony.status === "approved" ? 'bg-green-100 text-green-800' :
+                            testimony.status === "rejected" ? 'bg-red-100 text-red-800' :
+                              'bg-orange-100 text-orange-800'
                             }`}>
-                            {testimony.approved ? (
+                            {testimony.status === "approved" ? (
                               <>
                                 <CheckCircle className="w-3 h-3 mr-1" />
                                 Approved
+                              </>
+                            ) : testimony.status === "rejected" ? (
+                              <>
+                                <X className="w-3 h-3 mr-1" />
+                                Rejected
                               </>
                             ) : (
                               <>
@@ -486,7 +506,7 @@ export default function TestimoniesManagement() {
                             <Edit className="w-4 h-4 text-blue-600" />
                           </button>
 
-                          {!testimony.approved ? (
+                          {testimony.status === "pending" ? (
                             <>
                               <button
                                 onClick={() => moderateTestimony(testimony.id!, 'approve')}
@@ -587,14 +607,19 @@ export default function TestimoniesManagement() {
                             <p className="text-xs text-muted-foreground capitalize">{getTestimonyType(testimony)}</p>
 
                             <div className="mt-2">
-                              <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${testimony.approved
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-orange-100 text-orange-800'
+                              <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${testimony.status === "approved" ? 'bg-green-100 text-green-800' :
+                                testimony.status === "rejected" ? 'bg-red-100 text-red-800' :
+                                  'bg-orange-100 text-orange-800'
                                 }`}>
-                                {testimony.approved ? (
+                                {testimony.status === "approved" ? (
                                   <>
                                     <CheckCircle className="w-3 h-3 mr-1" />
                                     Approved
+                                  </>
+                                ) : testimony.status === "rejected" ? (
+                                  <>
+                                    <X className="w-3 h-3 mr-1" />
+                                    Rejected
                                   </>
                                 ) : (
                                   <>
@@ -635,7 +660,7 @@ export default function TestimoniesManagement() {
                             <Edit className="w-4 h-4 text-blue-600" />
                           </button>
 
-                          {!testimony.approved ? (
+                          {testimony.status === "pending" ? (
                             <>
                               <button
                                 onClick={() => moderateTestimony(testimony.id!, 'approve')}
@@ -703,14 +728,19 @@ export default function TestimoniesManagement() {
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label className="text-sm font-semibold text-primary">Status</Label>
-                          <div className={`inline-flex items-center px-2 py-1 rounded-full text-sm font-medium ${selectedTestimony.approved
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-orange-100 text-orange-800'
+                          <div className={`inline-flex items-center px-2 py-1 rounded-full text-sm font-medium ${selectedTestimony.status === "approved" ? 'bg-green-100 text-green-800' :
+                            selectedTestimony.status === "rejected" ? 'bg-red-100 text-red-800' :
+                              'bg-orange-100 text-orange-800'
                             }`}>
-                            {selectedTestimony.approved ? (
+                            {selectedTestimony.status === "approved" ? (
                               <>
                                 <CheckCircle className="w-4 h-4 mr-2" />
                                 Approved
+                              </>
+                            ) : selectedTestimony.status === "rejected" ? (
+                              <>
+                                <X className="w-4 h-4 mr-2" />
+                                Rejected
                               </>
                             ) : (
                               <>
@@ -743,13 +773,14 @@ export default function TestimoniesManagement() {
                         </p>
                       </div>
 
-                      {(selectedTestimony.image || selectedTestimony.video) && (
+                      {((selectedTestimony.images?.length || 0) > 0 || (selectedTestimony.videos?.length || 0) > 0) && (
                         <div className="space-y-2">
                           <Label className="text-sm font-semibold text-primary">Media</Label>
                           <div className="space-y-3">
-                            {selectedTestimony.image && (
+                            {selectedTestimony.images?.map((img) => (
                               <img
-                                src={getMediaUrl(selectedTestimony.image)}
+                                key={img.id}
+                                src={getMediaUrl(img.image)}
                                 alt="Testimony"
                                 className="w-full max-w-md h-48 object-cover rounded-lg"
                                 onError={(e) => {
@@ -757,10 +788,11 @@ export default function TestimoniesManagement() {
                                   target.style.display = 'none'
                                 }}
                               />
-                            )}
-                            {selectedTestimony.video && (
+                            ))}
+                            {selectedTestimony.videos?.map((vid) => (
                               <video
-                                src={getMediaUrl(selectedTestimony.video)}
+                                key={vid.id}
+                                src={getMediaUrl(vid.video)}
                                 controls
                                 className="w-full max-w-md h-48 rounded-lg"
                                 onError={(e) => {
@@ -770,7 +802,7 @@ export default function TestimoniesManagement() {
                               >
                                 Your browser does not support the video tag.
                               </video>
-                            )}
+                            ))}
                           </div>
                         </div>
                       )}
@@ -782,7 +814,7 @@ export default function TestimoniesManagement() {
                         </div>
                       </div>
 
-                      {!selectedTestimony.approved && (
+                      {selectedTestimony.status === "pending" && (
                         <div className="flex gap-3 pt-4 border-t border-border">
                           <Button
                             onClick={() => {
@@ -859,34 +891,70 @@ export default function TestimoniesManagement() {
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                      <div className="space-y-3">
-                        <Label htmlFor="edit-image" className="text-base font-medium">Image URL (optional)</Label>
-                        <Input
-                          id="edit-image"
-                          type="url"
-                          value={editFormData.image}
-                          onChange={(e) => setEditFormData({ ...editFormData, image: e.target.value })}
-                          placeholder="https://example.com/image.jpg"
-                          className="text-base"
-                        />
-                        <p className="text-xs text-muted-foreground leading-relaxed">
-                          Leave empty to remove current image
-                        </p>
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-image" className="text-sm md:text-base font-medium">Image (optional)</Label>
+                        <div className="relative">
+                          <Input
+                            id="edit-image"
+                            type="file"
+                            onChange={(e) => handleEditFileChange(e, 'image')}
+                            accept="image/*"
+                            disabled={!!editFormData.video}
+                            className="text-sm md:text-base file:mr-4 file:py-2 file:px-4 file:rounded-sm file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground file:hover:bg-primary/90 file:cursor-pointer file:transition-colors"
+                          />
+                          <div className="mt-2 flex items-center gap-2">
+                            <Image className="w-4 h-4 text-muted-foreground" />
+                            <p className="text-xs text-muted-foreground">
+                              Upload a new image to replace current one
+                            </p>
+                          </div>
+                          {editFormData.image && (
+                            <div className="mt-2 p-3 bg-muted/50 rounded-lg border">
+                              <div className="flex items-center gap-2">
+                                <Image className="w-4 h-4 text-primary" />
+                                <div>
+                                  <p className="text-sm font-medium">{editFormData.image.name}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {formatFileSize(editFormData.image.size)}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </div>
 
-                      <div className="space-y-3">
-                        <Label htmlFor="edit-video" className="text-base font-medium">Video URL (optional)</Label>
-                        <Input
-                          id="edit-video"
-                          type="url"
-                          value={editFormData.video}
-                          onChange={(e) => setEditFormData({ ...editFormData, video: e.target.value })}
-                          placeholder="https://example.com/video.mp4"
-                          className="text-base"
-                        />
-                        <p className="text-xs text-muted-foreground leading-relaxed">
-                          Leave empty to remove current video
-                        </p>
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-video" className="text-sm md:text-base font-medium">Video (optional)</Label>
+                        <div className="relative">
+                          <Input
+                            id="edit-video"
+                            type="file"
+                            onChange={(e) => handleEditFileChange(e, 'video')}
+                            accept="video/*"
+                            disabled={!!editFormData.image}
+                            className="text-sm md:text-base file:mr-4 file:py-2 file:px-4 file:rounded-sm file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground file:hover:bg-primary/90 file:cursor-pointer file:transition-colors"
+                          />
+                          <div className="mt-2 flex items-center gap-2">
+                            <Video className="w-4 h-4 text-muted-foreground" />
+                            <p className="text-xs text-muted-foreground">
+                              Upload a new video to replace current one
+                            </p>
+                          </div>
+                          {editFormData.video && (
+                            <div className="mt-2 p-3 bg-muted/50 rounded-lg border">
+                              <div className="flex items-center gap-2">
+                                <Video className="w-4 h-4 text-primary" />
+                                <div>
+                                  <p className="text-sm font-medium">{editFormData.video.name}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {formatFileSize(editFormData.video.size)}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
 
@@ -900,6 +968,7 @@ export default function TestimoniesManagement() {
                       >
                         <option value="pending">⏳ Pending Review</option>
                         <option value="approved">✅ Approved</option>
+                        <option value="rejected">❌ Rejected</option>
                       </select>
                     </div>
 
