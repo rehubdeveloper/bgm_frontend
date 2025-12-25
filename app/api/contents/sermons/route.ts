@@ -20,8 +20,8 @@ export async function GET(request: NextRequest) {
     }
 
     try {
-        // Forward the request to the external API content endpoint
-        const externalApiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/contents/sermons/`;
+        // Forward the request to the external API admin-panel endpoint
+        const externalApiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/admin-panel/sermons/`;
         console.log(`[${requestId}] 🌐 Forwarding to external API: ${externalApiUrl}`);
 
         const fetchStartTime = Date.now();
@@ -42,12 +42,16 @@ export async function GET(request: NextRequest) {
             console.log(`[${requestId}] 📥 Parsing external API response...`);
             data = await response.json();
             console.log(`[${requestId}] 📋 External API response data:`, JSON.stringify(data, null, 2));
-
-
-
         } catch (parseError) {
             console.log(`[${requestId}] ❌ Failed to parse external API response as JSON:`, parseError);
-            console.log(`[${requestId}] 📄 Raw response text:`, await response.text());
+            // Clone the response to avoid body consumption issues
+            const responseClone = response.clone();
+            try {
+                const rawText = await responseClone.text();
+                console.log(`[${requestId}] 📄 Raw error response text:`, rawText);
+            } catch (textError) {
+                console.log(`[${requestId}] ❌ Could not read raw response text either:`, textError);
+            }
             data = { error: 'Invalid response from external API' };
         }
 
@@ -125,8 +129,8 @@ export async function POST(request: NextRequest) {
 
         console.log(`[${requestId}] ✅ Validation passed for all required fields`);
 
-        // Forward the request to the external API
-        const externalApiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/contents/sermons/`;
+        // Forward the request to the external API admin-panel endpoint
+        const externalApiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/admin-panel/sermons/`;
         console.log(`[${requestId}] 🌐 Forwarding to external API: ${externalApiUrl}`);
 
         const fetchStartTime = Date.now();
@@ -149,7 +153,14 @@ export async function POST(request: NextRequest) {
             console.log(`[${requestId}] 📋 External API response data:`, JSON.stringify(data, null, 2));
         } catch (parseError) {
             console.log(`[${requestId}] ❌ Failed to parse external API response as JSON:`, parseError);
-            console.log(`[${requestId}] 📄 Raw response text:`, await response.text());
+            // Clone the response to avoid body consumption issues
+            const responseClone = response.clone();
+            try {
+                const rawText = await responseClone.text();
+                console.log(`[${requestId}] 📄 Raw error response text:`, rawText);
+            } catch (textError) {
+                console.log(`[${requestId}] ❌ Could not read raw response text either:`, textError);
+            }
             data = { error: 'Invalid response from external API' };
         }
 

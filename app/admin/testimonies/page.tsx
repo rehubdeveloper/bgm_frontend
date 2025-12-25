@@ -17,14 +17,8 @@ interface Testimony {
   member_name: string;
   status: "pending" | "approved" | "rejected";
   rejection_reason?: string;
-  images: Array<{
-    id: number;
-    image: string;
-  }>;
-  videos: Array<{
-    id: number;
-    video: string;
-  }>;
+  images: string; // API returns string, not array
+  videos: string; // API returns string, not array
   created_at: string;
 }
 
@@ -45,6 +39,7 @@ export default function TestimoniesManagement() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [activeTab, setActiveTab] = useState("all")
   const [loadingActions, setLoadingActions] = useState<Set<number>>(new Set())
+  const [rejectReason, setRejectReason] = useState("")
 
   useEffect(() => {
     console.log('🗣️ Testimonies admin component mounted, fetching testimonies...')
@@ -213,7 +208,7 @@ export default function TestimoniesManagement() {
     return `${apiBaseUrl}${mediaPath}`
   }
 
-  const moderateTestimony = async (testimonyId: number, action: "approve" | "reject") => {
+  const moderateTestimony = async (testimonyId: number, action: "approve" | "reject", reason?: string) => {
     console.log(`⚖️ Moderating testimony ${testimonyId} with action: ${action}`)
     try {
       // Add loading state for specific testimony
@@ -225,13 +220,18 @@ export default function TestimoniesManagement() {
         return
       }
 
+      const requestBody: any = { action }
+      if (action === 'reject' && reason) {
+        requestBody.reason = reason
+      }
+
       const response = await fetch(`/api/contents/testimonies/${testimonyId}/moderate/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({ action }),
+        body: JSON.stringify(requestBody),
       })
 
       if (response.ok) {
@@ -241,12 +241,17 @@ export default function TestimoniesManagement() {
         setTestimonies(prevTestimonies =>
           prevTestimonies.map(testimony =>
             testimony.id === testimonyId
-              ? { ...testimony, status: action === 'approve' ? 'approved' : 'rejected' as const }
+              ? {
+                ...testimony,
+                status: action === 'approve' ? 'approved' : 'rejected' as const,
+                rejection_reason: action === 'reject' ? reason : testimony.rejection_reason
+              }
               : testimony
           )
         )
 
         setSubmitSuccess(`Testimony ${action}d successfully!`)
+        setRejectReason("") // Clear the reason
       } else {
         const errorData = await response.json()
         setSubmitError(errorData.error || `Failed to ${action} testimony`)
@@ -311,6 +316,8 @@ export default function TestimoniesManagement() {
         return testimonies.filter(t => t.status === "pending")
       case "approved":
         return testimonies.filter(t => t.status === "approved")
+      case "rejected":
+        return testimonies.filter(t => t.status === "rejected")
       default:
         return testimonies
     }
@@ -318,6 +325,7 @@ export default function TestimoniesManagement() {
 
   const getPendingCount = () => testimonies.filter(t => t.status === "pending").length
   const getApprovedCount = () => testimonies.filter(t => t.status === "approved").length
+  const getRejectedCount = () => testimonies.filter(t => t.status === "rejected").length
 
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes'
@@ -388,17 +396,15 @@ export default function TestimoniesManagement() {
           <p className="text-muted-foreground text-sm">Approved</p>
           <p className="text-3xl font-display font-bold text-green-500 mt-2">{getApprovedCount()}</p>
         </Card>
-        <Card className="p-4 glass-card border-2 border-primary/20">
-          <p className="text-muted-foreground text-sm">Media Testimonies</p>
-          <p className="text-3xl font-display font-bold text-primary mt-2">
-            {testimonies.filter(t => (t.images?.length || 0) > 0 || (t.videos?.length || 0) > 0).length}
-          </p>
+        <Card className="p-4 glass-card border-2 border-red-500/20">
+          <p className="text-muted-foreground text-sm">Rejected</p>
+          <p className="text-3xl font-display font-bold text-red-500 mt-2">{getRejectedCount()}</p>
         </Card>
       </div>
 
       {/* Testimonies Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="all" className="flex items-center gap-2">
             All ({testimonies.length})
           </TabsTrigger>
@@ -409,6 +415,10 @@ export default function TestimoniesManagement() {
           <TabsTrigger value="approved" className="flex items-center gap-2">
             <CheckCircle className="w-4 h-4 text-green-500" />
             Approved ({getApprovedCount()})
+          </TabsTrigger>
+          <TabsTrigger value="rejected" className="flex items-center gap-2">
+            <X className="w-4 h-4 text-red-500" />
+            Rejected ({getRejectedCount()})
           </TabsTrigger>
         </TabsList>
 
@@ -423,12 +433,14 @@ export default function TestimoniesManagement() {
               <FileText className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-medium text-foreground mb-2">
                 {activeTab === "pending" ? "No pending testimonies" :
-                  activeTab === "approved" ? "No approved testimonies" : "No testimonies yet"}
+                  activeTab === "approved" ? "No approved testimonies" :
+                    activeTab === "rejected" ? "No rejected testimonies" : "No testimonies yet"}
               </h3>
               <p className="text-muted-foreground">
                 {activeTab === "pending" ? "All testimonies have been reviewed" :
                   activeTab === "approved" ? "No testimonies have been approved yet" :
-                    "Member testimonies will appear here once submitted"}
+                    activeTab === "rejected" ? "No testimonies have been rejected yet" :
+                      "Member testimonies will appear here once submitted"}
               </p>
             </div>
           ) : (
@@ -534,21 +546,37 @@ export default function TestimoniesManagement() {
                                     )}
                                   </button>
                                 </AlertDialogTrigger>
-                                <AlertDialogContent>
+                                <AlertDialogContent className="sm:max-w-[500px]">
                                   <AlertDialogHeader>
                                     <AlertDialogTitle>Reject Testimony</AlertDialogTitle>
                                     <AlertDialogDescription>
                                       Are you sure you want to reject this testimony from {testimony.member_name}?
-                                      This action cannot be undone.
+                                      Please provide a reason for rejection.
                                     </AlertDialogDescription>
                                   </AlertDialogHeader>
+                                  <div className="py-4">
+                                    <Label htmlFor="reject-reason" className="text-sm font-medium">Rejection Reason *</Label>
+                                    <Textarea
+                                      id="reject-reason"
+                                      value={rejectReason}
+                                      onChange={(e) => setRejectReason(e.target.value)}
+                                      placeholder="Please provide a reason for rejecting this testimony..."
+                                      className="mt-2 min-h-[80px]"
+                                      required
+                                    />
+                                  </div>
                                   <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogCancel onClick={() => setRejectReason("")}>Cancel</AlertDialogCancel>
                                     <AlertDialogAction
-                                      onClick={() => moderateTestimony(testimony.id!, 'reject')}
+                                      onClick={() => {
+                                        if (rejectReason.trim()) {
+                                          moderateTestimony(testimony.id!, 'reject', rejectReason.trim())
+                                        }
+                                      }}
                                       className="bg-red-600 hover:bg-red-700"
+                                      disabled={!rejectReason.trim()}
                                     >
-                                      Reject
+                                      Reject Testimony
                                     </AlertDialogAction>
                                   </AlertDialogFooter>
                                 </AlertDialogContent>
@@ -680,21 +708,37 @@ export default function TestimoniesManagement() {
                                     <X className="w-4 h-4 text-red-600" />
                                   </button>
                                 </AlertDialogTrigger>
-                                <AlertDialogContent>
+                                <AlertDialogContent className="sm:max-w-[500px]">
                                   <AlertDialogHeader>
                                     <AlertDialogTitle>Reject Testimony</AlertDialogTitle>
                                     <AlertDialogDescription>
                                       Are you sure you want to reject this testimony from {testimony.member_name}?
-                                      This action cannot be undone.
+                                      Please provide a reason for rejection.
                                     </AlertDialogDescription>
                                   </AlertDialogHeader>
+                                  <div className="py-4">
+                                    <Label htmlFor="reject-reason-mobile" className="text-sm font-medium">Rejection Reason *</Label>
+                                    <Textarea
+                                      id="reject-reason-mobile"
+                                      value={rejectReason}
+                                      onChange={(e) => setRejectReason(e.target.value)}
+                                      placeholder="Please provide a reason for rejecting this testimony..."
+                                      className="mt-2 min-h-[80px]"
+                                      required
+                                    />
+                                  </div>
                                   <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogCancel onClick={() => setRejectReason("")}>Cancel</AlertDialogCancel>
                                     <AlertDialogAction
-                                      onClick={() => moderateTestimony(testimony.id!, 'reject')}
+                                      onClick={() => {
+                                        if (rejectReason.trim()) {
+                                          moderateTestimony(testimony.id!, 'reject', rejectReason.trim())
+                                        }
+                                      }}
                                       className="bg-red-600 hover:bg-red-700"
+                                      disabled={!rejectReason.trim()}
                                     >
-                                      Reject
+                                      Reject Testimony
                                     </AlertDialogAction>
                                   </AlertDialogFooter>
                                 </AlertDialogContent>
@@ -773,14 +817,13 @@ export default function TestimoniesManagement() {
                         </p>
                       </div>
 
-                      {((selectedTestimony.images?.length || 0) > 0 || (selectedTestimony.videos?.length || 0) > 0) && (
+                      {((selectedTestimony.images && selectedTestimony.images.trim() !== '') || (selectedTestimony.videos && selectedTestimony.videos.trim() !== '')) && (
                         <div className="space-y-2">
                           <Label className="text-sm font-semibold text-primary">Media</Label>
                           <div className="space-y-3">
-                            {selectedTestimony.images?.map((img) => (
+                            {selectedTestimony.images && selectedTestimony.images.trim() !== '' && (
                               <img
-                                key={img.id}
-                                src={getMediaUrl(img.image)}
+                                src={getMediaUrl(selectedTestimony.images)}
                                 alt="Testimony"
                                 className="w-full max-w-md h-48 object-cover rounded-lg"
                                 onError={(e) => {
@@ -788,11 +831,10 @@ export default function TestimoniesManagement() {
                                   target.style.display = 'none'
                                 }}
                               />
-                            ))}
-                            {selectedTestimony.videos?.map((vid) => (
+                            )}
+                            {selectedTestimony.videos && selectedTestimony.videos.trim() !== '' && (
                               <video
-                                key={vid.id}
-                                src={getMediaUrl(vid.video)}
+                                src={getMediaUrl(selectedTestimony.videos)}
                                 controls
                                 className="w-full max-w-md h-48 rounded-lg"
                                 onError={(e) => {
@@ -802,7 +844,7 @@ export default function TestimoniesManagement() {
                               >
                                 Your browser does not support the video tag.
                               </video>
-                            ))}
+                            )}
                           </div>
                         </div>
                       )}

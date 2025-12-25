@@ -54,15 +54,16 @@ export async function GET(request: NextRequest) {
             const apiResponse = await response.json();
             console.log(`[${requestId}] 📋 External API response received with paginated format`);
 
-            // Handle paginated response - extract results array and convert status to approved
+            // Handle paginated response - extract results array
             if (apiResponse.results && Array.isArray(apiResponse.results)) {
                 data = apiResponse.results.map((testimony: any) => ({
                     id: testimony.id,
                     text: testimony.text,
-                    image: testimony.image,
-                    video: testimony.video,
+                    images: testimony.images,
+                    videos: testimony.videos,
                     member_name: testimony.member_name,
-                    approved: testimony.status === 'approved',
+                    status: testimony.status,
+                    rejection_reason: testimony.rejection_reason,
                     created_at: testimony.created_at
                 }));
                 console.log(`[${requestId}] 📋 Extracted ${data.length} testimonies from paginated response`);
@@ -73,17 +74,25 @@ export async function GET(request: NextRequest) {
                     {
                         id: 1,
                         text: "Mock testimony - This is a test testimony",
-                        image: null,
-                        video: null,
+                        images: null,
+                        videos: null,
                         member_name: "Mock User",
-                        approved: false,
+                        status: "pending",
+                        rejection_reason: null,
                         created_at: new Date().toISOString()
                     }
                 ];
             }
         } catch (parseError) {
             console.log(`[${requestId}] ❌ Failed to parse external API response as JSON:`, parseError);
-            console.log(`[${requestId}] 📄 Raw response text:`, await response.text());
+            // Clone the response to avoid body consumption issues
+            const responseClone = response.clone();
+            try {
+                const rawText = await responseClone.text();
+                console.log(`[${requestId}] 📄 Raw response text:`, rawText);
+            } catch (textError) {
+                console.log(`[${requestId}] ❌ Could not read raw response text either:`, textError);
+            }
             data = { error: 'Invalid response from external API' };
         }
 
@@ -155,8 +164,8 @@ export async function POST(request: NextRequest) {
 
         console.log(`[${requestId}] ✅ Validation passed for all required fields`);
 
-        // Forward the request to the external API
-        const externalApiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/contents/testimonies/submit/`;
+        // Forward the request to the external API (use admin-panel endpoint for submissions)
+        const externalApiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/admin-panel/testimonies/`;
         console.log(`[${requestId}] 🌐 Forwarding to external API: ${externalApiUrl}`);
 
         const fetchStartTime = Date.now();
@@ -179,7 +188,14 @@ export async function POST(request: NextRequest) {
             console.log(`[${requestId}] 📋 External API response data:`, JSON.stringify(data, null, 2));
         } catch (parseError) {
             console.log(`[${requestId}] ❌ Failed to parse external API response as JSON:`, parseError);
-            console.log(`[${requestId}] 📄 Raw response text:`, await response.text());
+            // Clone the response to avoid body consumption issues
+            const responseClone = response.clone();
+            try {
+                const rawText = await responseClone.text();
+                console.log(`[${requestId}] 📄 Raw response text:`, rawText);
+            } catch (textError) {
+                console.log(`[${requestId}] ❌ Could not read raw response text either:`, textError);
+            }
             data = { error: 'Invalid response from external API' };
         }
 

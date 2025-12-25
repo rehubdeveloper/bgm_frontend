@@ -75,9 +75,31 @@ export default function SermonsManagement() {
 
             if (response.ok) {
                 const data = await response.json()
+
+                // Check if data is the array or if it's inside a 'results' property
+                const sermonsArray = Array.isArray(data) ? data : (data.results || [])
+
+                console.log('✅ Sermons fetched successfully:', sermonsArray.length)
+                setSermons(sermonsArray) // Ensure we only ever set an array
+            }
+
+            if (response.ok) {
+                const data = await response.json()
                 console.log('✅ Sermons fetched successfully:', data.length, 'sermons')
                 console.log('📋 Sermon data example:', data[0])
-                setSermons(data)
+
+                // Transform the API response to match our interface
+                // API returns 'audios' array, we need 'audio' string
+                const transformedSermons = data.map((sermon: any) => ({
+                    id: sermon.id,
+                    title: sermon.title,
+                    preacher: sermon.preacher,
+                    description: sermon.description,
+                    created_at: sermon.created_at,
+                    audio: sermon.audios && sermon.audios.length > 0 ? sermon.audios[0].audio : null
+                }))
+
+                setSermons(transformedSermons)
             } else {
                 if (response.status === 401) {
                     console.log('🔐 Token expired, redirecting to login')
