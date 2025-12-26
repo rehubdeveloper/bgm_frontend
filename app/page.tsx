@@ -186,7 +186,7 @@ export default function LandingPage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8">
             {[
               { number: "2K+", label: "Members Nationwide" },
-              { number: "3", label: "Weekly Programs" },
+              { number: "4", label: "Weekly Programs" },
               { number: "24/7", label: "Prayer Support" },
               { number: "100%", label: "Faith-Driven" },
             ].map((stat, idx) => (
@@ -408,7 +408,7 @@ export default function LandingPage() {
                 <MapPin className="w-6 h-6 text-primary" />
               </div>
               <h3 className="font-display font-bold text-xl mb-2">Location</h3>
-              <p className="text-muted-foreground font-body">123 Faith Avenue, Grace City, Nigeria</p>
+              <p className="text-muted-foreground font-body">30, Sijuade Street, By Odo-Olowu Bus Stop, Ijesha, Surulere, Lagos.</p>
             </div>
 
             <div className="glass-card p-8 rounded-2xl text-center">
@@ -416,7 +416,7 @@ export default function LandingPage() {
                 <Phone className="w-6 h-6 text-primary" />
               </div>
               <h3 className="font-display font-bold text-xl mb-2">Phone</h3>
-              <p className="text-muted-foreground font-body">+234 (0) 123 456 7890</p>
+              <p className="text-muted-foreground font-body">08065154670 <br></br> 08066462014</p>
             </div>
 
             <div className="glass-card p-8 rounded-2xl text-center">
@@ -424,7 +424,7 @@ export default function LandingPage() {
                 <Mail className="w-6 h-6 text-primary" />
               </div>
               <h3 className="font-display font-bold text-xl mb-2">Email</h3>
-              <p className="text-muted-foreground font-body">info@bgministry.com</p>
+              <p className="text-muted-foreground font-body">believergloriousministries@gmail.com</p>
             </div>
           </div>
 
@@ -566,7 +566,7 @@ export default function LandingPage() {
                 +234 810 722 4097
               </a> */}
               <p className="flex items-center gap-2">
-                Product of
+                Developed by
                 <Link
                   href="https://www.rehubdevelopers.com/"
                   target="_blank"

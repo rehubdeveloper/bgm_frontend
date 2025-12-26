@@ -11,14 +11,19 @@ import { Textarea } from "@/components/ui/textarea"
 import { Trash2, Edit, Plus, CheckCircle, Clock, Eye, Loader2, AlertCircle, Image, Video, FileText, Check, X, Upload } from "lucide-react"
 import { useState, useEffect } from "react"
 
+interface MediaObject {
+  id: number;
+  url: string;
+}
+
 interface Testimony {
   id: number;
   text: string;
   member_name: string;
   status: "pending" | "approved" | "rejected";
   rejection_reason?: string;
-  images: string; // API returns string, not array
-  videos: string; // API returns string, not array
+  images: MediaObject[]; // API returns array of objects with id and url
+  videos: MediaObject[]; // API returns array of objects with id and url
   created_at: string;
 }
 
@@ -34,7 +39,9 @@ export default function TestimoniesManagement() {
     text: "",
     image: null as File | null,
     video: null as File | null,
-    status: "pending"
+    status: "pending",
+    deleteImageIds: [] as number[],
+    deleteVideoIds: [] as number[]
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [activeTab, setActiveTab] = useState("all")
@@ -66,7 +73,7 @@ export default function TestimoniesManagement() {
       }
       console.log('✅ Access token found')
 
-      const apiUrl = '/api/contents/testimonies/'
+      const apiUrl = '/api/admin-panel/testimonies/'
       console.log('🌐 Fetching testimonies from:', apiUrl)
 
       const response = await fetch(apiUrl, {
@@ -80,8 +87,10 @@ export default function TestimoniesManagement() {
 
       if (response.ok) {
         const data = await response.json()
-        console.log('✅ Testimonies fetched successfully:', data.length, 'testimonies')
-        setTestimonies(data)
+        console.log('✅ Testimonies fetched successfully:', data.results?.length || data.length, 'testimonies')
+        // Handle both paginated and non-paginated responses
+        const testimoniesData = data.results || data
+        setTestimonies(testimoniesData)
       } else {
         if (response.status === 401) {
           console.log('🔐 Token expired, redirecting to login')
@@ -95,7 +104,13 @@ export default function TestimoniesManagement() {
       }
     } catch (error) {
       console.error('💥 Error fetching testimonies:', error)
-      setSubmitError('Network error occurred')
+
+      // Provide more specific error message
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        setSubmitError('Cannot connect to the API server. Please ensure the Django backend is running on port 9000.')
+      } else {
+        setSubmitError('Network error occurred')
+      }
     } finally {
       console.log('🏁 Testimonies fetch completed')
       setLoading(false)
@@ -126,7 +141,9 @@ export default function TestimoniesManagement() {
       text: testimony.text,
       image: null,
       video: null,
-      status: testimony.status
+      status: testimony.status,
+      deleteImageIds: [],
+      deleteVideoIds: []
     })
     setIsEditDialogOpen(true)
   }
@@ -161,6 +178,14 @@ export default function TestimoniesManagement() {
       updateFormData.append('status', editFormData.status)
       if (editFormData.image) updateFormData.append('images', editFormData.image)
       if (editFormData.video) updateFormData.append('videos', editFormData.video)
+
+      // Add delete IDs for media removal
+      editFormData.deleteImageIds.forEach(id => {
+        updateFormData.append('delete_image_ids', id.toString())
+      })
+      editFormData.deleteVideoIds.forEach(id => {
+        updateFormData.append('delete_video_ids', id.toString())
+      })
 
       const response = await fetch(`/api/admin-panel/testimonies/${selectedTestimony.id}/`, {
         method: 'PATCH',
@@ -198,14 +223,19 @@ export default function TestimoniesManagement() {
     }
   }
 
-  const getMediaUrl = (mediaPath: string) => {
-    // If it's already a full URL, return as is
-    if (mediaPath.startsWith('http://') || mediaPath.startsWith('https://')) {
-      return mediaPath
+  const getMediaUrl = (mediaObject: MediaObject) => {
+    console.log('🔍 Processing media object:', mediaObject)
+
+    // If mediaObject is invalid, return empty string
+    if (!mediaObject || !mediaObject.url) {
+      console.log('❌ Invalid media object, returning empty')
+      return ''
     }
-    // Otherwise, prepend the API base URL for media
-    const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://localhost:8000'
-    return `${apiBaseUrl}${mediaPath}`
+
+    const url = mediaObject.url
+    console.log('✅ Extracted URL:', url)
+
+    return url
   }
 
   const moderateTestimony = async (testimonyId: number, action: "approve" | "reject", reason?: string) => {
@@ -220,23 +250,28 @@ export default function TestimoniesManagement() {
         return
       }
 
-      const requestBody: any = { action }
-      if (action === 'reject' && reason) {
-        requestBody.reason = reason
+      let response;
+      if (action === 'approve') {
+        // Use admin panel approve endpoint
+        response = await fetch(`/api/admin-panel/testimonies/${testimonyId}/approve/`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        })
+      } else if (action === 'reject') {
+        // Use admin panel reject endpoint with reason
+        response = await fetch(`/api/admin-panel/testimonies/${testimonyId}/reject/`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({ rejection_reason: reason || "No reason provided" }),
+        })
       }
 
-      const response = await fetch(`/api/contents/testimonies/${testimonyId}/moderate/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify(requestBody),
-      })
-
-      if (response.ok) {
-        const result = await response.json()
-
+      if (response && response.ok) {
         // Update the testimony status in the local state
         setTestimonies(prevTestimonies =>
           prevTestimonies.map(testimony =>
@@ -252,7 +287,7 @@ export default function TestimoniesManagement() {
 
         setSubmitSuccess(`Testimony ${action}d successfully!`)
         setRejectReason("") // Clear the reason
-      } else {
+      } else if (response) {
         const errorData = await response.json()
         setSubmitError(errorData.error || `Failed to ${action} testimony`)
       }
@@ -817,33 +852,66 @@ export default function TestimoniesManagement() {
                         </p>
                       </div>
 
-                      {((selectedTestimony.images && selectedTestimony.images.trim() !== '') || (selectedTestimony.videos && selectedTestimony.videos.trim() !== '')) && (
+                      {((selectedTestimony.images && selectedTestimony.images.length > 0) || (selectedTestimony.videos && selectedTestimony.videos.length > 0)) && (
                         <div className="space-y-2">
                           <Label className="text-sm font-semibold text-primary">Media</Label>
-                          <div className="space-y-3">
-                            {selectedTestimony.images && selectedTestimony.images.trim() !== '' && (
-                              <img
-                                src={getMediaUrl(selectedTestimony.images)}
-                                alt="Testimony"
-                                className="w-full max-w-md h-48 object-cover rounded-lg"
-                                onError={(e) => {
-                                  const target = e.target as HTMLImageElement
-                                  target.style.display = 'none'
-                                }}
-                              />
+                          <div className="space-y-4">
+                            {/* Display all images */}
+                            {selectedTestimony.images && selectedTestimony.images.length > 0 && (
+                              <div className="space-y-2">
+                                <p className="text-sm font-medium text-muted-foreground">Images ({selectedTestimony.images.length})</p>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                  {selectedTestimony.images.map((image, index) => {
+                                    const imageUrl = getMediaUrl(image)
+                                    return imageUrl ? (
+                                      <div key={`image-${image.id}-${index}`} className="relative">
+                                        <img
+                                          src={imageUrl}
+                                          alt={`Testimony image ${index + 1}`}
+                                          className="w-full h-32 sm:h-40 object-cover rounded-lg border"
+                                          onError={(e) => {
+                                            const target = e.target as HTMLImageElement
+                                            target.style.display = 'none'
+                                          }}
+                                        />
+                                        <div className="absolute top-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
+                                          {index + 1}
+                                        </div>
+                                      </div>
+                                    ) : null
+                                  })}
+                                </div>
+                              </div>
                             )}
-                            {selectedTestimony.videos && selectedTestimony.videos.trim() !== '' && (
-                              <video
-                                src={getMediaUrl(selectedTestimony.videos)}
-                                controls
-                                className="w-full max-w-md h-48 rounded-lg"
-                                onError={(e) => {
-                                  const target = e.target as HTMLVideoElement
-                                  target.style.display = 'none'
-                                }}
-                              >
-                                Your browser does not support the video tag.
-                              </video>
+
+                            {/* Display all videos */}
+                            {selectedTestimony.videos && selectedTestimony.videos.length > 0 && (
+                              <div className="space-y-2">
+                                <p className="text-sm font-medium text-muted-foreground">Videos ({selectedTestimony.videos.length})</p>
+                                <div className="space-y-3">
+                                  {selectedTestimony.videos.map((video, index) => {
+                                    const videoUrl = getMediaUrl(video)
+                                    return videoUrl ? (
+                                      <div key={`video-${video.id}-${index}`} className="relative">
+                                        <video
+                                          src={videoUrl}
+                                          controls
+                                          className="w-full max-w-md h-48 rounded-lg border"
+                                          onError={(e) => {
+                                            const target = e.target as HTMLVideoElement
+                                            target.style.display = 'none'
+                                          }}
+                                        >
+                                          Your browser does not support the video tag.
+                                        </video>
+                                        <div className="absolute top-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
+                                          Video {index + 1}
+                                        </div>
+                                      </div>
+                                    ) : null
+                                  })}
+                                </div>
+                              </div>
                             )}
                           </div>
                         </div>
@@ -932,70 +1000,179 @@ export default function TestimoniesManagement() {
                       />
                     </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="edit-image" className="text-sm md:text-base font-medium">Image (optional)</Label>
-                        <div className="relative">
-                          <Input
-                            id="edit-image"
-                            type="file"
-                            onChange={(e) => handleEditFileChange(e, 'image')}
-                            accept="image/*"
-                            disabled={!!editFormData.video}
-                            className="text-sm md:text-base file:mr-4 file:py-2 file:px-4 file:rounded-sm file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground file:hover:bg-primary/90 file:cursor-pointer file:transition-colors"
-                          />
-                          <div className="mt-2 flex items-center gap-2">
-                            <Image className="w-4 h-4 text-muted-foreground" />
-                            <p className="text-xs text-muted-foreground">
-                              Upload a new image to replace current one
-                            </p>
-                          </div>
-                          {editFormData.image && (
-                            <div className="mt-2 p-3 bg-muted/50 rounded-lg border">
-                              <div className="flex items-center gap-2">
-                                <Image className="w-4 h-4 text-primary" />
-                                <div>
-                                  <p className="text-sm font-medium">{editFormData.image.name}</p>
-                                  <p className="text-xs text-muted-foreground">
-                                    {formatFileSize(editFormData.image.size)}
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
+                    {/* Current Media Section */}
+                    {selectedTestimony && ((selectedTestimony.images && selectedTestimony.images.length > 0) || (selectedTestimony.videos && selectedTestimony.videos.length > 0)) && (
+                      <div className="space-y-4">
+                        <Label className="text-base font-semibold">Current Media</Label>
 
-                      <div className="space-y-2">
-                        <Label htmlFor="edit-video" className="text-sm md:text-base font-medium">Video (optional)</Label>
-                        <div className="relative">
-                          <Input
-                            id="edit-video"
-                            type="file"
-                            onChange={(e) => handleEditFileChange(e, 'video')}
-                            accept="video/*"
-                            disabled={!!editFormData.image}
-                            className="text-sm md:text-base file:mr-4 file:py-2 file:px-4 file:rounded-sm file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground file:hover:bg-primary/90 file:cursor-pointer file:transition-colors"
-                          />
-                          <div className="mt-2 flex items-center gap-2">
-                            <Video className="w-4 h-4 text-muted-foreground" />
-                            <p className="text-xs text-muted-foreground">
-                              Upload a new video to replace current one
-                            </p>
+                        {/* Current Images */}
+                        {selectedTestimony.images && selectedTestimony.images.length > 0 && (
+                          <div className="space-y-2">
+                            <p className="text-sm font-medium text-muted-foreground">Current Images</p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              {selectedTestimony.images.map((image, index) => {
+                                const isMarkedForDeletion = editFormData.deleteImageIds.includes(image.id)
+                                return (
+                                  <div key={`current-image-${image.id}`} className={`relative border rounded-lg p-2 ${isMarkedForDeletion ? 'border-red-300 bg-red-50' : 'border-border'}`}>
+                                    <img
+                                      src={getMediaUrl(image)}
+                                      alt={`Current image ${index + 1}`}
+                                      className={`w-full h-24 object-cover rounded ${isMarkedForDeletion ? 'opacity-50' : ''}`}
+                                      onError={(e) => {
+                                        const target = e.target as HTMLImageElement
+                                        target.style.display = 'none'
+                                      }}
+                                    />
+                                    <div className="absolute top-1 right-1 flex gap-1">
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const newIds = isMarkedForDeletion
+                                            ? editFormData.deleteImageIds.filter(id => id !== image.id)
+                                            : [...editFormData.deleteImageIds, image.id]
+                                          setEditFormData({ ...editFormData, deleteImageIds: newIds })
+                                        }}
+                                        className={`p-1 rounded-full ${isMarkedForDeletion ? 'bg-red-500 text-white' : 'bg-black/50 text-white hover:bg-black/70'}`}
+                                        title={isMarkedForDeletion ? 'Unmark for deletion' : 'Mark for deletion'}
+                                      >
+                                        <Trash2 className="w-3 h-3" />
+                                      </button>
+                                    </div>
+                                    {isMarkedForDeletion && (
+                                      <div className="absolute inset-0 flex items-center justify-center bg-red-500/20 rounded">
+                                        <span className="text-red-600 font-medium text-sm">Will be deleted</span>
+                                      </div>
+                                    )}
+                                    <div className="absolute bottom-1 left-1 bg-black/50 text-white text-xs px-2 py-1 rounded">
+                                      {index + 1}
+                                    </div>
+                                  </div>
+                                )
+                              })}
+                            </div>
                           </div>
-                          {editFormData.video && (
-                            <div className="mt-2 p-3 bg-muted/50 rounded-lg border">
-                              <div className="flex items-center gap-2">
-                                <Video className="w-4 h-4 text-primary" />
-                                <div>
-                                  <p className="text-sm font-medium">{editFormData.video.name}</p>
-                                  <p className="text-xs text-muted-foreground">
-                                    {formatFileSize(editFormData.video.size)}
-                                  </p>
+                        )}
+
+                        {/* Current Videos */}
+                        {selectedTestimony.videos && selectedTestimony.videos.length > 0 && (
+                          <div className="space-y-2">
+                            <p className="text-sm font-medium text-muted-foreground">Current Videos</p>
+                            <div className="space-y-3">
+                              {selectedTestimony.videos.map((video, index) => {
+                                const isMarkedForDeletion = editFormData.deleteVideoIds.includes(video.id)
+                                return (
+                                  <div key={`current-video-${video.id}`} className={`relative border rounded-lg p-2 ${isMarkedForDeletion ? 'border-red-300 bg-red-50' : 'border-border'}`}>
+                                    <video
+                                      src={getMediaUrl(video)}
+                                      className={`w-full max-w-md h-32 rounded ${isMarkedForDeletion ? 'opacity-50' : ''}`}
+                                      onError={(e) => {
+                                        const target = e.target as HTMLVideoElement
+                                        target.style.display = 'none'
+                                      }}
+                                    >
+                                      Your browser does not support the video tag.
+                                    </video>
+                                    <div className="absolute top-1 right-1 flex gap-1">
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const newIds = isMarkedForDeletion
+                                            ? editFormData.deleteVideoIds.filter(id => id !== video.id)
+                                            : [...editFormData.deleteVideoIds, video.id]
+                                          setEditFormData({ ...editFormData, deleteVideoIds: newIds })
+                                        }}
+                                        className={`p-1 rounded-full ${isMarkedForDeletion ? 'bg-red-500 text-white' : 'bg-black/50 text-white hover:bg-black/70'}`}
+                                        title={isMarkedForDeletion ? 'Unmark for deletion' : 'Mark for deletion'}
+                                      >
+                                        <Trash2 className="w-3 h-3" />
+                                      </button>
+                                    </div>
+                                    {isMarkedForDeletion && (
+                                      <div className="absolute inset-0 flex items-center justify-center bg-red-500/20 rounded">
+                                        <span className="text-red-600 font-medium text-sm">Will be deleted</span>
+                                      </div>
+                                    )}
+                                    <div className="absolute bottom-1 left-1 bg-black/50 text-white text-xs px-2 py-1 rounded">
+                                      Video {index + 1}
+                                    </div>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Upload New Media Section */}
+                    <div className="space-y-4">
+                      <Label className="text-base font-semibold">Add New Media (Optional)</Label>
+
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="edit-image" className="text-sm md:text-base font-medium">Upload New Image</Label>
+                          <div className="relative">
+                            <Input
+                              id="edit-image"
+                              type="file"
+                              onChange={(e) => handleEditFileChange(e, 'image')}
+                              accept="image/*"
+                              disabled={!!editFormData.video}
+                              className="text-sm md:text-base file:mr-4 file:py-2 file:px-4 file:rounded-sm file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground file:hover:bg-primary/90 file:cursor-pointer file:transition-colors"
+                            />
+                            <div className="mt-2 flex items-center gap-2">
+                              <Image className="w-4 h-4 text-muted-foreground" />
+                              <p className="text-xs text-muted-foreground">
+                                Upload a new image (will be added to existing images)
+                              </p>
+                            </div>
+                            {editFormData.image && (
+                              <div className="mt-2 p-3 bg-muted/50 rounded-lg border">
+                                <div className="flex items-center gap-2">
+                                  <Image className="w-4 h-4 text-primary" />
+                                  <div>
+                                    <p className="text-sm font-medium">{editFormData.image.name}</p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {formatFileSize(editFormData.image.size)}
+                                    </p>
+                                  </div>
                                 </div>
                               </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="edit-video" className="text-sm md:text-base font-medium">Upload New Video</Label>
+                          <div className="relative">
+                            <Input
+                              id="edit-video"
+                              type="file"
+                              onChange={(e) => handleEditFileChange(e, 'video')}
+                              accept="video/*"
+                              disabled={!!editFormData.image}
+                              className="text-sm md:text-base file:mr-4 file:py-2 file:px-4 file:rounded-sm file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground file:hover:bg-primary/90 file:cursor-pointer file:transition-colors"
+                            />
+                            <div className="mt-2 flex items-center gap-2">
+                              <Video className="w-4 h-4 text-muted-foreground" />
+                              <p className="text-xs text-muted-foreground">
+                                Upload a new video (will be added to existing videos)
+                              </p>
                             </div>
-                          )}
+                            {editFormData.video && (
+                              <div className="mt-2 p-3 bg-muted/50 rounded-lg border">
+                                <div className="flex items-center gap-2">
+                                  <Video className="w-4 h-4 text-primary" />
+                                  <div>
+                                    <p className="text-sm font-medium">{editFormData.video.name}</p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {formatFileSize(editFormData.video.size)}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1125,10 +1302,11 @@ function TestimonyForm({
 
       const submitFormData = new FormData()
       submitFormData.append('text', formData.text)
-      if (formData.image) submitFormData.append('image', formData.image)
-      if (formData.video) submitFormData.append('video', formData.video)
+      submitFormData.append('status', 'pending') // Admin-created testimonies start as pending
+      if (formData.image) submitFormData.append('images', formData.image)
+      if (formData.video) submitFormData.append('videos', formData.video)
 
-      const response = await fetch('/api/contents/testimonies/', {
+      const response = await fetch('/api/admin-panel/testimonies/create/', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -1139,15 +1317,15 @@ function TestimonyForm({
       if (response.ok) {
         const newTestimony = await response.json()
         console.log('✅ Testimony created successfully:', newTestimony)
-        onSuccess("Testimony submitted successfully! It will be reviewed by administrators.")
+        onSuccess("Testimony created successfully!")
         resetForm()
         onSubmit() // Refresh the testimonies list
       } else {
         const errorData = await response.json()
-        onError(errorData.error || `Failed to submit testimony (${response.status})`)
+        onError(errorData.error || `Failed to create testimony (${response.status})`)
       }
     } catch (error) {
-      console.error('Error submitting testimony:', error)
+      console.error('Error creating testimony:', error)
       onError('Network error occurred')
     } finally {
       setIsSubmitting(false)

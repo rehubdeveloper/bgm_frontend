@@ -1,11 +1,53 @@
 import { Clock, Calendar, MapPin, Facebook, Youtube } from "lucide-react"
 
 export default function AboutPage() {
-    const schedule = [
-        { day: "1st Sunday", activity: "Anointing Service", time: "7:30 AM" },
-        { day: "Last Sunday", activity: "Enough is Enough Service", time: "7:30 AM" },
-        { day: "Thursdays", activity: "Prayer Summit", time: "7:30 AM" },
-        { day: "1st Day of Month", activity: "Commanding the Month", time: "7:00 AM" },
+    const sundayServices = [
+        {
+            title: "Last Sunday of Month",
+            service: "Enough is Enough Programme",
+            times: "6:45 AM & 10:00 AM"
+        },
+        {
+            title: "First Sunday of Month",
+            service: "Anointing Service",
+            times: "6:45 AM & 10:00 AM"
+        },
+        {
+            title: "Other Sundays",
+            service: "Regular Service",
+            times: "6:45 AM & 10:00 AM"
+        }
+    ]
+
+    const weeklyActivities = [
+        {
+            day: "Tuesday",
+            activity: "Revelation Hour (Bible Study)",
+            time: "6:00 PM"
+        },
+        {
+            day: "Thursday",
+            activity: "Prayer Summit/Counseling",
+            time: "9:00 AM"
+        },
+        {
+            day: "2nd Friday of Month",
+            activity: "Youth Fellowship",
+            time: "6:00 PM"
+        }
+    ]
+
+    const monthlyActivities = [
+        {
+            day: "2nd Wednesday of Month",
+            activity: "Women's Fellowship",
+            time: "5:30 PM"
+        },
+        {
+            day: "Last Saturday of Month",
+            activity: "Men's Fellowship",
+            time: "6:00 PM"
+        }
     ]
 
     return (
@@ -63,52 +105,114 @@ export default function AboutPage() {
                                     </a>
                                 </div>
                             </div>
-                        </div>
 
-                        {/* Schedule & Info */}
-                        <div className="space-y-8">
+                            {/* Location Card */}
                             <div className="glass-card p-8 rounded-3xl">
-                                <div className="flex items-center gap-3 mb-8">
-                                    <Calendar className="w-8 h-8 text-primary" />
-                                    <h2 className="text-3xl font-display font-bold">Weekly Activities</h2>
-                                </div>
-
-                                <div className="space-y-4">
-                                    {schedule.map((item, idx) => (
-                                        <div
-                                            key={idx}
-                                            className="flex items-center justify-between p-4 rounded-2xl bg-primary/5 border border-primary/10 hover:bg-primary/10 transition-colors"
-                                        >
-                                            <div>
-                                                <p className="font-display font-bold text-lg">{item.day}</p>
-                                                <p className="text-muted-foreground font-body">{item.activity}</p>
-                                            </div>
-                                            <div className="flex items-center gap-2 text-primary">
-                                                <Clock className="w-4 h-4" />
-                                                <span className="font-bold font-body">{item.time}</span>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-
-                                <div className="mt-8 p-6 rounded-2xl bg-secondary text-secondary-foreground">
-                                    <div className="flex gap-4">
-                                        <MapPin className="w-6 h-6 text-primary flex-shrink-0" />
-                                        <div>
-                                            <p className="font-display font-bold mb-1">Our Location</p>
-                                            <p className="text-sm font-body opacity-80">
-                                                30 Sijuade Str, By Odo-Olowu B/Stop, Liesha, Surulere, Lagos
+                                <div className="flex gap-4 items-start">
+                                    <div className="p-3 bg-primary/10 rounded-2xl">
+                                        <MapPin className="w-6 h-6 text-primary" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <h3 className="text-xl font-display font-bold mb-2">Our Location</h3>
+                                        <p className="text-muted-foreground font-body leading-relaxed">
+                                            30 Sijuade Str, By Odo-Olowu B/Stop, Liesha, Surulere, Lagos
+                                        </p>
+                                        <div className="mt-4 pt-4 border-t border-border/50">
+                                            <p className="text-sm text-muted-foreground font-body">
+                                                Join us in person or online for all our services and activities
                                             </p>
                                         </div>
                                     </div>
                                 </div>
                             </div>
+                        </div>
 
-                            <div className="glass-card p-8 rounded-3xl bg-primary text-primary-foreground">
-                                <h3 className="text-2xl font-display font-bold mb-4">Every Sunday</h3>
-                                <p className="text-3xl font-display font-bold mb-2">Join Us at 7:30 AM</p>
-                                <p className="font-body opacity-90">Experience spiritual growth and fellowship in person or online.</p>
+                        {/* Schedule & Info */}
+                        <div className="space-y-8">
+                            {/* Church Activities - Organized Layout */}
+                            <div className="glass-card p-8 rounded-3xl">
+                                <div className="flex items-center gap-3 mb-10">
+                                    <Calendar className="w-8 h-8 text-primary" />
+                                    <h2 className="text-3xl font-display font-bold">Church Activities</h2>
+                                </div>
+
+                                {/* Sunday Services Section */}
+                                <div className="mb-12">
+                                    <div className="flex items-center gap-3 mb-6">
+                                        <div className="w-2 h-8 bg-primary rounded-full"></div>
+                                        <h3 className="text-2xl font-display font-bold text-primary">Sunday Services</h3>
+                                    </div>
+                                    <div className="grid gap-4">
+                                        {sundayServices.map((service, idx) => (
+                                            <div
+                                                key={idx}
+                                                className="p-6 rounded-2xl bg-gradient-to-r from-primary/5 to-accent/5 border border-primary/20 hover:border-primary/40 transition-all duration-300 hover:scale-[1.02]"
+                                            >
+                                                <div className="flex items-start justify-between mb-2">
+                                                    <h4 className="font-display font-bold text-xl text-primary">{service.title}</h4>
+                                                    <div className="flex items-center gap-2 text-primary/80">
+                                                        <Clock className="w-5 h-5" />
+                                                        <span className="font-bold font-body text-sm">{service.times}</span>
+                                                    </div>
+                                                </div>
+                                                <p className="text-muted-foreground font-body text-lg">{service.service}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Weekly Activities Section */}
+                                <div className="mb-12">
+                                    <div className="flex items-center gap-3 mb-6">
+                                        <div className="w-2 h-8 bg-accent rounded-full"></div>
+                                        <h3 className="text-2xl font-display font-bold text-accent">Weekly Activities</h3>
+                                    </div>
+                                    <div className="grid gap-4">
+                                        {weeklyActivities.map((activity, idx) => (
+                                            <div
+                                                key={idx}
+                                                className="flex items-center justify-between p-5 rounded-2xl bg-gradient-to-r from-primary/5 to-accent/5 border border-primary/20 hover:border-primary/40 transition-all duration-300 hover:scale-[1.02]"
+                                            >
+                                                <div className="flex-1">
+                                                    <p className="font-display font-bold text-lg">{activity.day}</p>
+                                                    <p className="text-muted-foreground font-body">{activity.activity}</p>
+                                                </div>
+                                                <div className="flex items-center gap-2 text-primary ml-4">
+                                                    <Clock className="w-4 h-4" />
+                                                    <span className="font-bold font-body">{activity.time}</span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Monthly Activities Section */}
+                                <div className="mb-8">
+                                    <div className="flex items-center gap-3 mb-6">
+                                        <div className="w-2 h-8 bg-accent rounded-full"></div>
+                                        <h3 className="text-2xl font-display font-bold text-accent">Monthly Activities</h3>
+                                    </div>
+                                    <div className="grid gap-4">
+                                        {monthlyActivities.map((activity, idx) => (
+                                            <div
+                                                key={idx}
+                                                className="flex items-center justify-between p-5 rounded-2xl bg-gradient-to-r from-primary/5 to-accent/5 border border-primary/20 hover:border-primary/40 transition-all duration-300 hover:scale-[1.02]"
+                                            >
+                                                <div className="flex-1">
+                                                    <p className="font-display font-bold text-lg">{activity.day}</p>
+                                                    <p className="text-muted-foreground font-body">{activity.activity}</p>
+                                                </div>
+                                                <div className="flex items-center gap-2 text-primary ml-4">
+                                                    <Clock className="w-4 h-4" />
+                                                    <span className="font-bold font-body">{activity.time}</span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
                             </div>
+
+
                         </div>
                     </div>
                 </div>
