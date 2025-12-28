@@ -18,8 +18,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     try {
-        // Forward the request to the external API content endpoint
-        const externalApiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/admin-panel/sermons/${id}/`;
+        // Forward the request to the external API admin-panel endpoint
+        const externalApiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/admin-panel/members/${id}/`;
 
         const fetchStartTime = Date.now();
         const response = await fetch(externalApiUrl, {
@@ -36,7 +36,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         let data;
         if (response.status === 404) {
             
-            data = { error: 'Sermon not found' };
+            data = { error: 'Member not found' };
         } else if (response.status >= 400) {
             // Try to get error details for other client/server errors
             try {
@@ -71,7 +71,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         return NextResponse.json(data, { status: response.status });
     } catch (error) {
         const totalDuration = Date.now() - startTime;
-        console.error(`[${requestId}] 💥 Individual sermon fetch error after ${totalDuration}ms:`, error);
+        console.error(`[${requestId}] 💥 Individual member fetch error after ${totalDuration}ms:`, error);
 
         const errorDetails = error instanceof Error ? {
             name: error.name,
@@ -108,7 +108,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         const body = await request.json();
 
         // Forward the request to the external API
-        const externalApiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/admin-panel/sermons/${id}/`;
+        const externalApiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/admin-panel/members/${id}/`;
 
         const fetchStartTime = Date.now();
         const response = await fetch(externalApiUrl, {
@@ -137,7 +137,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         return NextResponse.json(data, { status: response.status });
     } catch (error) {
         const totalDuration = Date.now() - startTime;
-        console.error(`[${requestId}] 💥 Sermon update error after ${totalDuration}ms:`, error);
+        console.error(`[${requestId}] 💥 Member update error after ${totalDuration}ms:`, error);
 
         const errorDetails = error instanceof Error ? {
             name: error.name,
@@ -171,35 +171,19 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     }
 
     try {
-
-        // For PATCH requests, we need to forward the FormData as-is
-        const contentType = request.headers.get('content-type') || '';
-
-        let requestBody: any = null;
-
-        if (contentType.includes('multipart/form-data')) {
-            requestBody = await request.formData();
-
-            // Log FormData entries for debugging
-            for (let [key, value] of requestBody.entries()) {
-                
-            }
-        } else {
-            requestBody = await request.json();
-        }
+        const body = await request.json();
 
         // Forward the request to the external API
-        const externalApiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/admin-panel/sermons/${id}/`;
+        const externalApiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/admin-panel/members/${id}/`;
 
         const fetchStartTime = Date.now();
-
         const response = await fetch(externalApiUrl, {
             method: 'PATCH',
             headers: {
+                'Content-Type': 'application/json',
                 'Authorization': authHeader,
-                // Don't set Content-Type for FormData - let fetch set it automatically with boundary
             },
-            body: requestBody,
+            body: JSON.stringify(body),
         });
 
         const fetchDuration = Date.now() - fetchStartTime;
@@ -219,7 +203,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         return NextResponse.json(data, { status: response.status });
     } catch (error) {
         const totalDuration = Date.now() - startTime;
-        console.error(`[${requestId}] 💥 Sermon partial update error after ${totalDuration}ms:`, error);
+        console.error(`[${requestId}] 💥 Member partial update error after ${totalDuration}ms:`, error);
 
         const errorDetails = error instanceof Error ? {
             name: error.name,
@@ -254,7 +238,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
 
     try {
         // Forward the request to the external API
-        const externalApiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/admin-panel/sermons/${id}/`;
+        const externalApiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/admin-panel/members/${id}/`;
 
         const fetchStartTime = Date.now();
         const response = await fetch(externalApiUrl, {
@@ -275,10 +259,10 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
 
             return NextResponse.json({ success: true }, { status: 200 });
         } else if (response.status === 404) {
-            // Sermon not found
+            // Member not found
             
             return NextResponse.json(
-                { error: 'Sermon not found' },
+                { error: 'Member not found' },
                 { status: 404 }
             );
         } else if (response.status >= 400) {
@@ -304,13 +288,13 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
             const totalDuration = Date.now() - startTime;
             
             return NextResponse.json(
-                { success: true, message: 'Sermon deletion completed' },
+                { success: true, message: 'Member deletion completed' },
                 { status: 200 }
             );
         }
     } catch (error) {
         const totalDuration = Date.now() - startTime;
-        console.error(`[${requestId}] 💥 Sermon deletion error after ${totalDuration}ms:`, error);
+        console.error(`[${requestId}] 💥 Member deletion error after ${totalDuration}ms:`, error);
 
         const errorDetails = error instanceof Error ? {
             name: error.name,

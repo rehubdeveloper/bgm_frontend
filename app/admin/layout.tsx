@@ -46,10 +46,8 @@ export default function AdminLayout({
 
       // Validate token with server
       const tokenValid = await validateToken(accessToken)
-      console.log('Token validation result:', tokenValid)
 
       if (!tokenValid) {
-        console.log('🔐 Security: Invalid access token detected, clearing local auth and redirecting to login')
         // Token invalid - clear everything and redirect to login
         localStorage.removeItem('access_token')
         localStorage.removeItem('refresh_token')
@@ -96,17 +94,13 @@ export default function AdminLayout({
 
   const menuItems = [
     { label: "Dashboard", href: "/admin", icon: BarChart3 },
-    { label: "Content", href: "/admin/content", icon: FileText },
     { label: "Testimonies", href: "/admin/testimonies", icon: MessageSquare },
     { label: "Sermons", href: "/admin/sermons", icon: Mic },
     { label: "Devotionals", href: "/admin/devotionals", icon: BookOpen },
     { label: "Events", href: "/admin/events", icon: Calendar },
-    { label: "Giving", href: "/admin/giving", icon: Heart },
     { label: "Members", href: "/admin/members", icon: Users },
     { label: "Departments", href: "/admin/departments", icon: Building },
-    { label: "Contact", href: "/admin/contact", icon: Mail },
-    { label: "Branches", href: "/admin/branches", icon: Building },
-    { label: "Live TV", href: "/admin/live-tv", icon: Tv },
+
   ]
 
   return (

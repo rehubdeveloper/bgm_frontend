@@ -49,7 +49,6 @@ export default function TestimoniesManagement() {
   const [rejectReason, setRejectReason] = useState("")
 
   useEffect(() => {
-    console.log('🗣️ Testimonies admin component mounted, fetching testimonies...')
     fetchTestimonies()
   }, [])
 
@@ -64,17 +63,14 @@ export default function TestimoniesManagement() {
   }, [submitError])
 
   const fetchTestimonies = async () => {
-    console.log('🚀 Starting testimonies fetch...')
     try {
       const token = localStorage.getItem('access_token')
       if (!token) {
         console.error('❌ No access token found')
         return
       }
-      console.log('✅ Access token found')
 
       const apiUrl = '/api/admin-panel/testimonies/'
-      console.log('🌐 Fetching testimonies from:', apiUrl)
 
       const response = await fetch(apiUrl, {
         method: 'GET',
@@ -83,17 +79,14 @@ export default function TestimoniesManagement() {
         },
       })
 
-      console.log('📊 Testimonies fetch response status:', response.status, response.statusText)
 
       if (response.ok) {
         const data = await response.json()
-        console.log('✅ Testimonies fetched successfully:', data.results?.length || data.length, 'testimonies')
         // Handle both paginated and non-paginated responses
         const testimoniesData = data.results || data
         setTestimonies(testimoniesData)
       } else {
         if (response.status === 401) {
-          console.log('🔐 Token expired, redirecting to login')
           localStorage.removeItem('access_token')
           window.location.href = '/login'
           return
@@ -112,7 +105,6 @@ export default function TestimoniesManagement() {
         setSubmitError('Network error occurred')
       }
     } finally {
-      console.log('🏁 Testimonies fetch completed')
       setLoading(false)
     }
   }
@@ -197,7 +189,6 @@ export default function TestimoniesManagement() {
 
       if (response.ok) {
         const updatedTestimony = await response.json()
-        console.log('✅ Testimony updated successfully:', updatedTestimony)
 
         // Update local state
         setTestimonies(prevTestimonies =>
@@ -224,22 +215,18 @@ export default function TestimoniesManagement() {
   }
 
   const getMediaUrl = (mediaObject: MediaObject) => {
-    console.log('🔍 Processing media object:', mediaObject)
 
     // If mediaObject is invalid, return empty string
     if (!mediaObject || !mediaObject.url) {
-      console.log('❌ Invalid media object, returning empty')
       return ''
     }
 
     const url = mediaObject.url
-    console.log('✅ Extracted URL:', url)
 
     return url
   }
 
   const moderateTestimony = async (testimonyId: number, action: "approve" | "reject", reason?: string) => {
-    console.log(`⚖️ Moderating testimony ${testimonyId} with action: ${action}`)
     try {
       // Add loading state for specific testimony
       setLoadingActions(prev => new Set(prev).add(testimonyId))
@@ -1316,7 +1303,6 @@ function TestimonyForm({
 
       if (response.ok) {
         const newTestimony = await response.json()
-        console.log('✅ Testimony created successfully:', newTestimony)
         onSuccess("Testimony created successfully!")
         resetForm()
         onSubmit() // Refresh the testimonies list

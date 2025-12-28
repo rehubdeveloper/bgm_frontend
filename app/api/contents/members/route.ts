@@ -6,7 +6,7 @@ export async function GET(request: NextRequest) {
     const requestId = Math.random().toString(36).substring(7);
 
 
-    // Check for authorization header
+    // Check for authorization header (required for admin content)
     const authHeader = request.headers.get('authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
         
@@ -17,17 +17,15 @@ export async function GET(request: NextRequest) {
     }
 
     try {
-        // Forward the request to the external API admin panel endpoint
-        // Use Basic auth as expected by the backend API
-        const basicAuth = 'Basic YWRtaW5AZ21haWwuY29tOmFkbWlu'; // admin@gmail.com:admin
-        const externalApiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/admin-panel/departments/`;
+        // Forward the request to the external API admin-panel endpoint
+        const externalApiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/admin-panel/members/`;
 
         const fetchStartTime = Date.now();
         const response = await fetch(externalApiUrl, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': basicAuth,
+                'Authorization': authHeader,
             },
         });
 
@@ -39,6 +37,13 @@ export async function GET(request: NextRequest) {
             data = await response.json();
         } catch (parseError) {
             
+            // Clone the response to avoid body consumption issues
+            const responseClone = response.clone();
+            try {
+                const rawText = await responseClone.text();
+            } catch (textError) {
+                
+            }
             data = { error: 'Invalid response from external API' };
         }
 
@@ -48,7 +53,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json(data, { status: response.status });
     } catch (error) {
         const totalDuration = Date.now() - startTime;
-        console.error(`[${requestId}] 💥 Admin departments fetch error after ${totalDuration}ms:`, error);
+        console.error(`[${requestId}] 💥 Members fetch error after ${totalDuration}ms:`, error);
 
         const errorDetails = error instanceof Error ? {
             name: error.name,
@@ -83,40 +88,15 @@ export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
 
-        // Validate required fields
-        
-        const requiredFields = ['name', 'description'];
-
-        for (const field of requiredFields) {
-            if (body[field] === undefined || body[field] === null || body[field] === '') {
-                
-                return NextResponse.json(
-                    { error: `Missing required field: ${field}` },
-                    { status: 400 }
-                );
-            }
-        }
-
-        // Handle optional leader field
-        if (body.leader !== undefined && body.leader !== null && body.leader !== '') {
-            body.leader = parseInt(body.leader);
-        } else {
-            body.leader = null; // or omit it entirely
-        }
-
-        
-
-        // Forward the request to the external API admin panel endpoint
-        // Use Basic auth as expected by the backend API
-        const basicAuth = 'Basic YWRtaW5AZ21haWwuY29tOmFkbWlu'; // admin@gmail.com:admin
-        const externalApiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/admin-panel/departments/`;
+        // Forward the request to the external API admin-panel endpoint
+        const externalApiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/admin-panel/members/`;
 
         const fetchStartTime = Date.now();
         const response = await fetch(externalApiUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': basicAuth,
+                'Authorization': authHeader,
             },
             body: JSON.stringify(body),
         });
@@ -138,7 +118,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(data, { status: response.status });
     } catch (error) {
         const totalDuration = Date.now() - startTime;
-        console.error(`[${requestId}] 💥 Admin department creation error after ${totalDuration}ms:`, error);
+        console.error(`[${requestId}] 💥 Member creation error after ${totalDuration}ms:`, error);
 
         const errorDetails = error instanceof Error ? {
             name: error.name,

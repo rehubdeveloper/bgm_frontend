@@ -3,9 +3,12 @@
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Progress } from "@/components/ui/progress"
 import { useState, useEffect } from "react"
 import { Plus, Eye, Trash2, Loader2, Edit } from "lucide-react"
 
@@ -19,12 +22,30 @@ interface Department {
     updated_at: string;
 }
 
+interface Member {
+    id: number;
+    first_name: string;
+    last_name: string;
+    email: string;
+    phone: string;
+    department: number;
+    date_of_birth: string;
+    marital_status: 'single' | 'married' | 'divorced' | 'widowed';
+    gender: 'male' | 'female' | 'other';
+    occupation: string;
+    address: string;
+    created_at: string;
+    updated_at: string;
+}
+
 export default function DepartmentsManagement() {
     const [departments_list, setDepartments] = useState<Department[]>([])
+    const [members, setMembers] = useState<Member[]>([])
     const [loading, setLoading] = useState(true)
     const [isDialogOpen, setIsDialogOpen] = useState(false)
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
     const [isSubmitting, setIsSubmitting] = useState(false)
+    const [isDeleting, setIsDeleting] = useState(false)
     const [editingDepartment, setEditingDepartment] = useState<Department | null>(null)
     const [formData, setFormData] = useState({
         name: "",
@@ -39,7 +60,46 @@ export default function DepartmentsManagement() {
 
     useEffect(() => {
         fetchDepartments()
+        fetchMembers()
     }, [])
+
+    const fetchMembers = async () => {
+        try {
+            const token = localStorage.getItem('access_token')
+            if (!token) {
+                console.error('❌ No access token found')
+                return
+            }
+
+            const apiUrl = '/api/contents/members/'
+
+            const response = await fetch(apiUrl, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            })
+
+
+            if (response.ok) {
+                const data = await response.json()
+
+                // Check if data is the array or if it's inside a 'results' property
+                const membersArray = Array.isArray(data) ? data : (data.results || [])
+                setMembers(membersArray)
+            } else {
+                if (response.status === 401) {
+                    localStorage.removeItem('access_token')
+                    window.location.href = '/login'
+                    return
+                }
+                const errorData = await response.json()
+                console.error('❌ Members fetch failed:', errorData)
+            }
+        } catch (error) {
+            console.error('💥 Error fetching members:', error)
+        }
+    }
 
     const fetchDepartments = async () => {
         try {
@@ -104,7 +164,7 @@ export default function DepartmentsManagement() {
                 body: JSON.stringify({
                     name: formData.name.trim(),
                     description: formData.description.trim(),
-                    leader: formData.leader ? parseInt(formData.leader) : null,
+                    leader: formData.leader && formData.leader !== "none" ? parseInt(formData.leader) : null,
                 }),
             })
 
@@ -132,18 +192,23 @@ export default function DepartmentsManagement() {
     }
 
     const handleEdit = (department: Department) => {
+
         setEditingDepartment(department)
         setEditFormData({
             name: department.name,
             description: department.description,
-            leader: department.leader ? department.leader.toString() : "",
+            leader: department.leader ? department.leader.toString() : "none",
         })
         setIsEditDialogOpen(true)
     }
 
     const handleUpdate = async (e: React.FormEvent) => {
         e.preventDefault()
-        if (!editingDepartment) return
+        if (!editingDepartment) {
+            console.error('❌ No editing department set')
+            return
+        }
+
 
         setIsSubmitting(true)
 
@@ -167,17 +232,38 @@ export default function DepartmentsManagement() {
                 return
             }
 
+            // Check what fields actually changed
+            const changes: any = {}
+
+            if (editFormData.name.trim() !== editingDepartment.name) {
+                changes.name = editFormData.name.trim()
+            }
+
+            if (editFormData.description.trim() !== editingDepartment.description) {
+                changes.description = editFormData.description.trim()
+            }
+
+            // Always include leader field if it changed
+            const newLeader = editFormData.leader && editFormData.leader !== "none" ? parseInt(editFormData.leader) : null
+            if (newLeader !== editingDepartment.leader) {
+                changes.leader = newLeader
+            }
+
+            // If no changes, don't send request
+            if (Object.keys(changes).length === 0) {
+                setIsEditDialogOpen(false)
+                setEditingDepartment(null)
+                return
+            }
+
+
             const response = await fetch(`/api/admin/departments/${editingDepartment.id}/`, {
-                method: 'PUT',
+                method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`,
                 },
-                body: JSON.stringify({
-                    name: editFormData.name.trim(),
-                    description: editFormData.description.trim(),
-                    leader: editFormData.leader ? parseInt(editFormData.leader) : null,
-                }),
+                body: JSON.stringify(changes),
             })
 
             if (response.ok) {
@@ -196,13 +282,70 @@ export default function DepartmentsManagement() {
                 setIsEditDialogOpen(false)
                 setEditingDepartment(null)
             } else {
-                console.error('Failed to update department')
+                const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+                console.error('Failed to update department:', errorData)
+                console.error('Response status:', response.status)
+                console.error('Response status text:', response.statusText)
             }
         } catch (error) {
             console.error('Error updating department:', error)
         } finally {
             setIsSubmitting(false)
         }
+    }
+
+    const handleDeleteDepartment = async (departmentId: number) => {
+
+        try {
+            setIsDeleting(true)
+
+            const token = localStorage.getItem('access_token')
+            if (!token) {
+                console.error('No access token found')
+                return
+            }
+
+
+            const response = await fetch(`/api/admin/departments/${departmentId}/`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            })
+
+
+            if (response.ok) {
+                // Remove the department from the local state
+                setDepartments(departments_list.filter(department => department.id !== departmentId))
+            } else {
+                console.error('❌ Delete request failed with status:', response.status, response.statusText)
+
+                if (response.status === 401) {
+                    localStorage.removeItem('access_token')
+                    window.location.href = '/login'
+                    return
+                }
+
+                // For non-OK responses, try to parse error JSON, but handle cases where there's no body
+                try {
+                    const errorData = await response.json()
+                    console.error('❌ Failed to delete department - error details:', errorData)
+                    console.error('❌ Error keys:', Object.keys(errorData))
+                } catch (parseError) {
+                    console.error('❌ Failed to parse error response as JSON:', parseError)
+                    console.error('❌ Raw response status:', response.status, response.statusText)
+                }
+            }
+        } catch (error) {
+            console.error('💥 Error deleting department:', error)
+        } finally {
+            setIsDeleting(false)
+        }
+    }
+
+    const getMemberName = (memberId: number) => {
+        const member = members.find(mem => mem.id === memberId)
+        return member ? `${member.first_name} ${member.last_name}` : `Member ${memberId}`
     }
 
     return (
@@ -248,15 +391,20 @@ export default function DepartmentsManagement() {
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="leader" className="text-sm md:text-base">Leader ID (Optional)</Label>
-                                <Input
-                                    id="leader"
-                                    type="number"
-                                    value={formData.leader}
-                                    onChange={(e) => setFormData({ ...formData, leader: e.target.value })}
-                                    placeholder="Enter leader ID (optional)"
-                                    className="text-sm md:text-base"
-                                />
+                                <Label htmlFor="leader" className="text-sm md:text-base">Leader (Optional)</Label>
+                                <Select value={formData.leader} onValueChange={(value) => setFormData({ ...formData, leader: value })}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select a leader (optional)" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="none">No leader</SelectItem>
+                                        {members.map((member) => (
+                                            <SelectItem key={member.id} value={member.id.toString()}>
+                                                {member.first_name} {member.last_name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </div>
                             <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
                                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} className="w-full sm:w-auto">
@@ -307,15 +455,20 @@ export default function DepartmentsManagement() {
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="edit-leader" className="text-sm md:text-base">Leader ID (Optional)</Label>
-                                <Input
-                                    id="edit-leader"
-                                    type="number"
-                                    value={editFormData.leader}
-                                    onChange={(e) => setEditFormData({ ...editFormData, leader: e.target.value })}
-                                    placeholder="Enter leader ID (optional)"
-                                    className="text-sm md:text-base"
-                                />
+                                <Label htmlFor="edit-leader" className="text-sm md:text-base">Leader (Optional)</Label>
+                                <Select value={editFormData.leader} onValueChange={(value) => setEditFormData({ ...editFormData, leader: value })}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select a leader (optional)" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="none">No leader</SelectItem>
+                                        {members.map((member) => (
+                                            <SelectItem key={member.id} value={member.id.toString()}>
+                                                {member.first_name} {member.last_name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </div>
                             <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
                                 <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)} className="w-full sm:w-auto">
@@ -389,7 +542,7 @@ export default function DepartmentsManagement() {
                                     <td className="px-4 py-4 text-sm text-foreground font-medium">{department.name}</td>
                                     <td className="px-4 py-4 text-sm text-muted-foreground max-w-xs truncate">{department.description}</td>
                                     <td className="px-4 py-4 text-sm text-muted-foreground">
-                                        {department.leader ? `Leader ${department.leader}` : 'No leader assigned'}
+                                        {department.leader ? getMemberName(department.leader) : 'No leader assigned'}
                                     </td>
                                     <td className="px-4 py-4 text-sm text-muted-foreground">
                                         <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${department.is_active
@@ -409,9 +562,56 @@ export default function DepartmentsManagement() {
                                         >
                                             <Edit className="w-4 h-4 text-primary" />
                                         </button>
-                                        <button className="p-2 hover:bg-muted rounded-lg transition-colors">
-                                            <Trash2 className="w-4 h-4 text-destructive" />
-                                        </button>
+                                        <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <button
+                                                    disabled={isDeleting}
+                                                    className="p-2 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                                                    title="Delete department"
+                                                >
+                                                    {isDeleting ? (
+                                                        <Loader2 className="w-4 h-4 animate-spin text-red-500" />
+                                                    ) : (
+                                                        <Trash2 className="w-4 h-4 text-red-500" />
+                                                    )}
+                                                </button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>Delete Department</AlertDialogTitle>
+                                                    <AlertDialogDescription>
+                                                        Are you sure you want to delete "{department.name}"? This action cannot be undone and will permanently remove the department from the system.
+                                                    </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                {isDeleting && (
+                                                    <div className="py-4">
+                                                        <div className="flex items-center gap-3 mb-2">
+                                                            <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                                                            <p className="text-sm font-medium">Deleting department...</p>
+                                                        </div>
+                                                        <Progress value={75} className="w-full" />
+                                                        <p className="text-xs text-muted-foreground mt-2">Please wait while we remove the department from the system.</p>
+                                                    </div>
+                                                )}
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+                                                    <AlertDialogAction
+                                                        onClick={() => handleDeleteDepartment(department.id)}
+                                                        className="bg-red-600 hover:bg-red-700"
+                                                        disabled={isDeleting}
+                                                    >
+                                                        {isDeleting ? (
+                                                            <>
+                                                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                                                Deleting...
+                                                            </>
+                                                        ) : (
+                                                            "Delete Department"
+                                                        )}
+                                                    </AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
                                     </td>
                                 </tr>
                             ))}
@@ -442,9 +642,56 @@ export default function DepartmentsManagement() {
                                         >
                                             <Edit className="w-4 h-4 text-primary" />
                                         </button>
-                                        <button className="p-2 hover:bg-muted rounded-lg transition-colors">
-                                            <Trash2 className="w-4 h-4 text-destructive" />
-                                        </button>
+                                        <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <button
+                                                    disabled={isDeleting}
+                                                    className="p-2 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                                                    title="Delete department"
+                                                >
+                                                    {isDeleting ? (
+                                                        <Loader2 className="w-4 h-4 animate-spin text-red-500" />
+                                                    ) : (
+                                                        <Trash2 className="w-4 h-4 text-red-500" />
+                                                    )}
+                                                </button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>Delete Department</AlertDialogTitle>
+                                                    <AlertDialogDescription>
+                                                        Are you sure you want to delete "{department.name}"? This action cannot be undone and will permanently remove the department from the system.
+                                                    </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                {isDeleting && (
+                                                    <div className="py-4">
+                                                        <div className="flex items-center gap-3 mb-2">
+                                                            <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                                                            <p className="text-sm font-medium">Deleting department...</p>
+                                                        </div>
+                                                        <Progress value={75} className="w-full" />
+                                                        <p className="text-xs text-muted-foreground mt-2">Please wait while we remove the department from the system.</p>
+                                                    </div>
+                                                )}
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+                                                    <AlertDialogAction
+                                                        onClick={() => handleDeleteDepartment(department.id)}
+                                                        className="bg-red-600 hover:bg-red-700"
+                                                        disabled={isDeleting}
+                                                    >
+                                                        {isDeleting ? (
+                                                            <>
+                                                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                                                Deleting...
+                                                            </>
+                                                        ) : (
+                                                            "Delete Department"
+                                                        )}
+                                                    </AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
                                     </div>
                                 </div>
 
@@ -452,7 +699,7 @@ export default function DepartmentsManagement() {
                                     <div>
                                         <p className="text-muted-foreground">Leader</p>
                                         <p className="text-foreground font-medium truncate">
-                                            {department.leader ? `Leader ${department.leader}` : 'No leader assigned'}
+                                            {department.leader ? getMemberName(department.leader) : 'No leader assigned'}
                                         </p>
                                     </div>
                                     <div>

@@ -42,8 +42,6 @@ export default function LoginPage() {
         setSuccess('')
 
         try {
-            console.log('Login form data:', { email: data.email, hasPassword: !!data.password })
-
             const response = await fetch('/api/token', {
                 method: 'POST',
                 headers: {
@@ -61,7 +59,6 @@ export default function LoginPage() {
 
             if (response.ok && result.access) {
                 setSuccess('Login successful! Redirecting...')
-                console.log('Login successful, access token present, dispatching auth-change')
                 // Store tokens in localStorage
                 localStorage.setItem('access_token', result.access)
                 localStorage.setItem('refresh_token', result.refresh || '')
@@ -75,7 +72,6 @@ export default function LoginPage() {
                     router.push('/admin')
                 }, 1000)
             } else {
-                console.log('Login response not ok or no access token:', result)
                 // Handle different error types
                 if (result.detail) {
                     setError(result.detail)

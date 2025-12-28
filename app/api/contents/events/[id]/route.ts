@@ -18,8 +18,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     try {
-        // Forward the request to the external API content endpoint
-        const externalApiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/admin-panel/sermons/${id}/`;
+        // Forward the request to the external API admin-panel endpoint
+        const externalApiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/admin-panel/events/${id}/`;
 
         const fetchStartTime = Date.now();
         const response = await fetch(externalApiUrl, {
@@ -36,7 +36,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         let data;
         if (response.status === 404) {
             
-            data = { error: 'Sermon not found' };
+            data = { error: 'Event not found' };
         } else if (response.status >= 400) {
             // Try to get error details for other client/server errors
             try {
@@ -71,7 +71,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         return NextResponse.json(data, { status: response.status });
     } catch (error) {
         const totalDuration = Date.now() - startTime;
-        console.error(`[${requestId}] 💥 Individual sermon fetch error after ${totalDuration}ms:`, error);
+        console.error(`[${requestId}] 💥 Individual event fetch error after ${totalDuration}ms:`, error);
 
         const errorDetails = error instanceof Error ? {
             name: error.name,
@@ -105,19 +105,27 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     try {
-        const body = await request.json();
+        const formData = await request.formData();
+
+        // Debug: Log all form data entries
+        for (let [key, value] of formData.entries()) {
+            if (value instanceof File) {
+                
+            } else {
+                
+            }
+        }
 
         // Forward the request to the external API
-        const externalApiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/admin-panel/sermons/${id}/`;
+        const externalApiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/admin-panel/events/${id}/`;
 
         const fetchStartTime = Date.now();
         const response = await fetch(externalApiUrl, {
             method: 'PUT',
             headers: {
-                'Content-Type': 'application/json',
                 'Authorization': authHeader,
             },
-            body: JSON.stringify(body),
+            body: formData,
         });
 
         const fetchDuration = Date.now() - fetchStartTime;
@@ -137,7 +145,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         return NextResponse.json(data, { status: response.status });
     } catch (error) {
         const totalDuration = Date.now() - startTime;
-        console.error(`[${requestId}] 💥 Sermon update error after ${totalDuration}ms:`, error);
+        console.error(`[${requestId}] 💥 Event update error after ${totalDuration}ms:`, error);
 
         const errorDetails = error instanceof Error ? {
             name: error.name,
@@ -189,7 +197,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         }
 
         // Forward the request to the external API
-        const externalApiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/admin-panel/sermons/${id}/`;
+        const externalApiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/admin-panel/events/${id}/`;
 
         const fetchStartTime = Date.now();
 
@@ -219,7 +227,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         return NextResponse.json(data, { status: response.status });
     } catch (error) {
         const totalDuration = Date.now() - startTime;
-        console.error(`[${requestId}] 💥 Sermon partial update error after ${totalDuration}ms:`, error);
+        console.error(`[${requestId}] 💥 Event partial update error after ${totalDuration}ms:`, error);
 
         const errorDetails = error instanceof Error ? {
             name: error.name,
@@ -254,7 +262,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
 
     try {
         // Forward the request to the external API
-        const externalApiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/admin-panel/sermons/${id}/`;
+        const externalApiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/admin-panel/events/${id}/`;
 
         const fetchStartTime = Date.now();
         const response = await fetch(externalApiUrl, {
@@ -275,10 +283,10 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
 
             return NextResponse.json({ success: true }, { status: 200 });
         } else if (response.status === 404) {
-            // Sermon not found
+            // Event not found
             
             return NextResponse.json(
-                { error: 'Sermon not found' },
+                { error: 'Event not found' },
                 { status: 404 }
             );
         } else if (response.status >= 400) {
@@ -304,13 +312,13 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
             const totalDuration = Date.now() - startTime;
             
             return NextResponse.json(
-                { success: true, message: 'Sermon deletion completed' },
+                { success: true, message: 'Event deletion completed' },
                 { status: 200 }
             );
         }
     } catch (error) {
         const totalDuration = Date.now() - startTime;
-        console.error(`[${requestId}] 💥 Sermon deletion error after ${totalDuration}ms:`, error);
+        console.error(`[${requestId}] 💥 Event deletion error after ${totalDuration}ms:`, error);
 
         const errorDetails = error instanceof Error ? {
             name: error.name,

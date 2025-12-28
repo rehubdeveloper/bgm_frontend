@@ -13,8 +13,6 @@ export async function POST(request: NextRequest) {
         }
 
         // Forward the request to the external API
-        console.log('Sending login request to external API:', { email: body.email, hasPassword: !!body.password })
-
         const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/token/`, {
             method: 'POST',
             headers: {
@@ -26,20 +24,16 @@ export async function POST(request: NextRequest) {
             }),
         });
 
-        console.log('External API response status:', response.status);
-
         let data;
         try {
             data = await response.json();
-            console.log('External API response data:', data);
         } catch (e) {
-            console.log('Failed to parse response as JSON');
             data = { error: 'Invalid response from external API' };
         }
 
         return NextResponse.json(data, { status: response.status });
     } catch (error) {
-        console.error('Login error:', error);
+        
         return NextResponse.json(
             { error: 'Internal server error' },
             { status: 500 }

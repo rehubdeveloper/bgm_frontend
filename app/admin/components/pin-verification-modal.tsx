@@ -21,7 +21,6 @@ export function PinVerificationModal({ isOpen, onClose, onSuccess }: PinVerifica
 
     useEffect(() => {
         const handleAuthChange = () => {
-            console.log('Auth changed, resetting admin authorization')
             localStorage.removeItem('admin_authorized')
             localStorage.removeItem('admin_auth_time')
         }

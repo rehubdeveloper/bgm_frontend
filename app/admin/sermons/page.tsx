@@ -7,20 +7,31 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
+import { Progress } from "@/components/ui/progress"
 import { useState, useEffect, useRef } from "react"
-import { Plus, Mic, Loader2, CheckCircle, AlertCircle, Edit, Trash2, Play, Pause, Upload, SkipForward, Info } from "lucide-react"
+import { useSearchParams } from "next/navigation"
+import { Plus, Mic, Loader2, CheckCircle, AlertCircle, Edit, Trash2, Play, Pause, Upload, SkipForward, Info, Search, SortAsc, SortDesc, Grid, List } from "lucide-react"
 
+
+interface AudioObject {
+    id: number;
+    audio: string;
+    filename?: string;
+    duration?: number;
+    size?: number;
+}
 
 interface Sermon {
     id: number;
     title: string;
     preacher?: string;
-    audio?: string; // URL to audio file
     description?: string;
     created_at: string;
+    audios: AudioObject[]; // Array of audio objects from API
 }
 
 export default function SermonsManagement() {
+    const searchParams = useSearchParams()
     const [sermons, setSermons] = useState<Sermon[]>([])
     const [loading, setLoading] = useState(true)
     const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -35,7 +46,7 @@ export default function SermonsManagement() {
         title: "",
         preacher: "",
         description: "",
-        audio: ""
+        audios: [] as File[],
     })
     const audioRef = useRef<HTMLAudioElement | null>(null)
     const [playingSermonId, setPlayingSermonId] = useState<number | null>(null)
@@ -43,26 +54,38 @@ export default function SermonsManagement() {
         title: "",
         preacher: "",
         description: "",
-        audio: null as File | null,
+        audios: [] as File[],
     })
+    const [sortBy, setSortBy] = useState<'date' | 'title' | 'preacher'>('date')
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
+    const [filterText, setFilterText] = useState('')
+    const [viewMode, setViewMode] = useState<'list' | 'grid'>('list')
+    const [isDeletingAudio, setIsDeletingAudio] = useState<number | null>(null)
 
     useEffect(() => {
-        console.log('🎵 Sermons component mounted, fetching sermons...')
         fetchSermons()
     }, [])
 
+    // Check for URL parameters to auto-open dialogs
+    useEffect(() => {
+        const action = searchParams.get('action')
+
+        if (action === 'create') {
+            setIsDialogOpen(true)
+            // Clean up the URL
+            window.history.replaceState({}, '', '/admin/sermons')
+        }
+    }, [searchParams])
+
     const fetchSermons = async () => {
-        console.log('🚀 Starting sermons fetch...')
         try {
             const token = localStorage.getItem('access_token')
             if (!token) {
                 console.error('❌ No access token found')
                 return
             }
-            console.log('✅ Access token found')
 
             const apiUrl = '/api/contents/sermons/'
-            console.log('🌐 Fetching sermons from:', apiUrl)
 
             const response = await fetch(apiUrl, {
                 method: 'GET',
@@ -71,38 +94,15 @@ export default function SermonsManagement() {
                 },
             })
 
-            console.log('📊 Sermons fetch response status:', response.status, response.statusText)
 
             if (response.ok) {
                 const data = await response.json()
 
                 // Check if data is the array or if it's inside a 'results' property
                 const sermonsArray = Array.isArray(data) ? data : (data.results || [])
-
-                console.log('✅ Sermons fetched successfully:', sermonsArray.length)
                 setSermons(sermonsArray) // Ensure we only ever set an array
-            }
-
-            if (response.ok) {
-                const data = await response.json()
-                console.log('✅ Sermons fetched successfully:', data.length, 'sermons')
-                console.log('📋 Sermon data example:', data[0])
-
-                // Transform the API response to match our interface
-                // API returns 'audios' array, we need 'audio' string
-                const transformedSermons = data.map((sermon: any) => ({
-                    id: sermon.id,
-                    title: sermon.title,
-                    preacher: sermon.preacher,
-                    description: sermon.description,
-                    created_at: sermon.created_at,
-                    audio: sermon.audios && sermon.audios.length > 0 ? sermon.audios[0].audio : null
-                }))
-
-                setSermons(transformedSermons)
             } else {
                 if (response.status === 401) {
-                    console.log('🔐 Token expired, redirecting to login')
                     // Token expired or invalid, redirect to login
                     localStorage.removeItem('access_token')
                     window.location.href = '/login'
@@ -116,7 +116,6 @@ export default function SermonsManagement() {
             console.error('💥 Error fetching sermons:', error)
             setSubmitError('Network error occurred')
         } finally {
-            console.log('🏁 Sermons fetch completed, setting loading to false')
             setLoading(false)
         }
     }
@@ -135,17 +134,28 @@ export default function SermonsManagement() {
                 return
             }
 
-            if (!formData.audio) {
-                setSubmitError('Please select an audio file')
+            if (formData.audios.length === 0) {
+                setSubmitError('Please select at least one audio file')
                 setIsSubmitting(false)
                 return
             }
 
             const submitFormData = new FormData()
             submitFormData.append('title', formData.title)
-            submitFormData.append('preacher', formData.preacher)
-            submitFormData.append('description', formData.description)
-            submitFormData.append('audio', formData.audio)
+            submitFormData.append('preacher', formData.preacher || '')
+            submitFormData.append('description', formData.description || '')
+
+            // Append all audio files
+            formData.audios.forEach((file, index) => {
+                submitFormData.append('audios', file)
+            })
+
+            // Debug logging
+            for (let [key, value] of submitFormData.entries()) {
+                if (value instanceof File) {
+                } else {
+                }
+            }
 
             const response = await fetch('/api/contents/sermons/', {
                 method: 'POST',
@@ -162,7 +172,7 @@ export default function SermonsManagement() {
                     title: "",
                     preacher: "",
                     description: "",
-                    audio: null,
+                    audios: [],
                 })
                 setIsDialogOpen(false)
                 setSubmitSuccess("Sermon created successfully!")
@@ -191,7 +201,7 @@ export default function SermonsManagement() {
             title: "",
             preacher: "",
             description: "",
-            audio: null,
+            audios: [],
         })
         setSubmitError("")
         setSubmitSuccess("")
@@ -199,8 +209,34 @@ export default function SermonsManagement() {
     }
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0] || null
-        setFormData({ ...formData, audio: file })
+        const files = Array.from(e.target.files || [])
+
+        if (files.length > 0) {
+            // Validate each file type
+            const validAudioTypes = [
+                'audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/wave',
+                'audio/ogg', 'audio/oga', 'audio/mp4', 'audio/m4a',
+                'audio/aac', 'audio/flac', 'audio/webm'
+            ]
+
+            const validExtensions = ['.mp3', '.wav', '.ogg', '.m4a', '.aac', '.flac', '.webm']
+
+            const invalidFiles = files.filter(file => {
+                const fileName = file.name.toLowerCase()
+                const isValidType = validAudioTypes.includes(file.type) ||
+                                  validExtensions.some(ext => fileName.endsWith(ext))
+                return !isValidType
+            })
+
+            if (invalidFiles.length > 0) {
+                setSubmitError(`Invalid file types detected: ${invalidFiles.map(f => f.name).join(', ')}. Please select only valid audio files (MP3, WAV, OGG, M4A, AAC, FLAC, or WebM)`)
+                // Clear the file input
+                e.target.value = ''
+                return
+            }
+        }
+
+        setFormData({ ...formData, audios: files })
     }
 
     const formatFileSize = (bytes: number) => {
@@ -209,6 +245,26 @@ export default function SermonsManagement() {
         const sizes = ['Bytes', 'KB', 'MB', 'GB']
         const i = Math.floor(Math.log(bytes) / Math.log(k))
         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+    }
+
+    const getAudioFilename = (audioUrl: string) => {
+        try {
+            const url = new URL(audioUrl)
+            const pathname = url.pathname
+            const filename = pathname.split('/').pop() || 'audio-file'
+            return decodeURIComponent(filename)
+        } catch {
+            // Fallback for relative URLs or malformed URLs
+            const parts = audioUrl.split('/')
+            return parts[parts.length - 1] || 'audio-file'
+        }
+    }
+
+    const formatDuration = (seconds: number) => {
+        if (!seconds || seconds === 0) return ''
+        const minutes = Math.floor(seconds / 60)
+        const remainingSeconds = Math.floor(seconds % 60)
+        return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`
     }
 
     const handleViewSermon = (sermon: Sermon) => {
@@ -222,7 +278,7 @@ export default function SermonsManagement() {
             title: sermon.title,
             preacher: sermon.preacher || "",
             description: sermon.description || "",
-            audio: sermon.audio || ""
+            audios: []
         })
         setIsEditDialogOpen(true)
     }
@@ -241,34 +297,64 @@ export default function SermonsManagement() {
                 return
             }
 
-            const updateData = {
-                title: editFormData.title,
-                preacher: editFormData.preacher || undefined,
-                audio: editFormData.audio || undefined,
-                description: editFormData.description || undefined
-            }
+            // Check if we have new audio files to upload
+            const hasNewFiles = editFormData.audios.length > 0
 
-            const response = await fetch(`/api/contents/sermons/${selectedSermon.id}/`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
-                },
-                body: JSON.stringify(updateData),
-            })
+            let response
+
+            if (hasNewFiles) {
+                // Use PATCH with FormData to add new audio files
+                const formData = new FormData()
+                formData.append('title', editFormData.title)
+                formData.append('preacher', editFormData.preacher || '')
+                formData.append('description', editFormData.description || '')
+
+                // Append all new audio files
+                editFormData.audios.forEach((file, index) => {
+                    formData.append('audios', file)
+                })
+
+                response = await fetch(`/api/contents/sermons/${selectedSermon.id}/`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                    },
+                    body: formData,
+                })
+            } else {
+                // Use PUT for text-only updates (no new files)
+                const updateData = {
+                    title: editFormData.title,
+                    preacher: editFormData.preacher || undefined,
+                    description: editFormData.description || undefined
+                }
+
+                response = await fetch(`/api/contents/sermons/${selectedSermon.id}/`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`,
+                    },
+                    body: JSON.stringify(updateData),
+                })
+            }
 
             if (response.ok) {
                 const updatedSermon = await response.json()
-                console.log('✅ Sermon updated successfully:', updatedSermon)
 
                 // Update local state
                 setSermons(prevSermons =>
                     prevSermons.map(sermon =>
-                        sermon.id === selectedSermon.id
-                            ? { ...sermon, ...updateData, created_at: sermon.created_at }
-                            : sermon
+                        sermon.id === selectedSermon.id ? updatedSermon : sermon
                     )
                 )
+
+                setEditFormData({
+                    title: "",
+                    preacher: "",
+                    description: "",
+                    audios: []
+                })
 
                 setSubmitSuccess("Sermon updated successfully!")
                 setTimeout(() => setSubmitSuccess(""), 3000)
@@ -325,70 +411,112 @@ export default function SermonsManagement() {
         }
     }
 
+    const handleDeleteAudioFile = async (sermonId: number, audioId: number) => {
+        try {
+            setIsDeletingAudio(audioId)
+            setSubmitError("")
+
+            const token = localStorage.getItem('access_token')
+            if (!token) {
+                setSubmitError('Authentication required')
+                return
+            }
+
+            // Send FormData as per API documentation
+            const formData = new FormData()
+            formData.append('delete_audio_ids', audioId.toString())
+
+            const response = await fetch(`/api/contents/sermons/${sermonId}/`, {
+                method: 'PATCH',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: formData,
+            })
+
+            if (response.ok) {
+                const updatedSermon = await response.json()
+
+                // Update local state
+                setSermons(prevSermons =>
+                    prevSermons.map(s =>
+                        s.id === sermonId ? updatedSermon : s
+                    )
+                )
+
+                setSubmitSuccess("Audio file deleted successfully!")
+                setTimeout(() => setSubmitSuccess(""), 3000)
+            } else {
+                // Log the error details for debugging
+                console.error('❌ Delete audio file failed:', response.status, response.statusText)
+                try {
+                    const errorData = await response.json()
+                    console.error('Error data:', errorData)
+                    setSubmitError(errorData.error || `Failed to delete audio file (${response.status})`)
+                } catch (parseError) {
+                    console.error('Could not parse error response:', parseError)
+                    setSubmitError(`Failed to delete audio file (${response.status})`)
+                }
+            }
+        } catch (error) {
+            console.error('Error deleting audio file:', error)
+            setSubmitError('Network error occurred')
+        } finally {
+            setIsDeletingAudio(null)
+        }
+    }
+
 
 
     const playNextSermon = (currentSermonId: number, autoStop: boolean = false) => {
-        console.log('⏭️ Play Next button clicked for sermon ID:', currentSermonId)
-        console.log('📊 Total sermons:', sermons.length)
 
         if (sermons.length === 0) {
-            console.log('🚫 No sermons available, returning')
             return
         }
 
         // Find the current sermon by ID
         const currentIndex = sermons.findIndex(sermon => sermon.id === currentSermonId)
 
-        console.log('� Current sermon index in array:', currentIndex)
 
         if (currentIndex === -1) {
-            console.log('❌ Sermon not found in array, cannot find next')
             return
         }
 
         const nextIndex = (currentIndex + 1) % sermons.length
-        console.log('🎯 Next index:', nextIndex, '(after:', currentIndex, ', wraps to:', (currentIndex + 1) % sermons.length, ')')
 
         const nextSermon = sermons[nextIndex]
-        console.log('🎵 Next sermon:', nextSermon.title, `(ID: ${nextSermon.id})`)
 
-        if (nextSermon.audio) {
+        if (nextSermon.audios && nextSermon.audios.length > 0) {
+            const audioUrl = nextSermon.audios[0].audio
             // Check if it's actually an audio file (not image like .jpeg, .png)
-            const isValidAudio = !nextSermon.audio.includes('.jpeg') &&
-                !nextSermon.audio.includes('.jpg') &&
-                !nextSermon.audio.includes('.png');
+            const isValidAudio = !audioUrl.includes('.jpeg') &&
+                !audioUrl.includes('.jpg') &&
+                !audioUrl.includes('.png');
 
             if (isValidAudio) {
-                console.log('✅ Next sermon has valid audio, playing...')
 
                 // If autoStop is true, we want to immediately stop any current playback
                 // before starting the next one to avoid the AbortError
                 if (autoStop && audioRef.current) {
-                    console.log('⏸️ Stopping current audio before playing next')
                     audioRef.current.pause()
                     audioRef.current.currentTime = 0
                     audioRef.current.src = '' // Clear the source
                 }
 
-                togglePlay(nextSermon.id!, nextSermon.audio!)
+                togglePlay(nextSermon.id!, audioUrl)
             } else {
-                console.log('⚠️ Next sermon has invalid audio (image file), skipping:', nextSermon.audio)
                 // Skip this sermon, continue to next one via timeout to avoid infinite loops
                 setTimeout(() => playNextSermon(nextSermon.id!, false), 100)
             }
         } else {
-            console.log('❌ Next sermon has no audio, skipping')
         }
     }
 
     const togglePlay = async (sermonId: number, audioUrl: string) => {
-        console.log('🎶 Toggle play called for sermon ID:', sermonId, 'with audio URL:', audioUrl)
 
         if (playingSermonId === sermonId) {
-            console.log('⏸️ Same sermon already playing, pausing...')
             // Stop current audio completely
             if (audioRef.current) {
-                console.log('🎵 Stopping current audio')
                 audioRef.current.pause()
                 audioRef.current.currentTime = 0
                 audioRef.current.src = '' // Clear source
@@ -397,22 +525,15 @@ export default function SermonsManagement() {
                 audioRef.current.onerror = null
             }
             setPlayingSermonId(null)
-            console.log('� Set playing sermon ID to null')
         } else {
-            console.log('▶️ Playing new sermon...')
 
             // Always create a fresh Audio element to avoid AbortError
             // Existing audio elements can retain pending play requests
-            console.log('🆕 Creating fresh audio element for:', sermonId)
             const newAudio = new Audio(audioUrl)
-            console.log('🎵 Created new Audio object with src:', audioUrl)
 
             // Set up event handlers BEFORE playing
             newAudio.onended = () => {
-                console.log('🏁 Audio finished playing for ID:', sermonId)
-                console.log('♻️ Auto-playing next sermon in loop')
                 setTimeout(() => {
-                    console.log('⏯️ Starting auto-play for sermon that just finished:', sermonId)
                     playNextSermon(sermonId, false)
                 }, 1000) // 1 second delay before next
             }
@@ -425,7 +546,6 @@ export default function SermonsManagement() {
 
             // Clean up old audio element
             if (audioRef.current) {
-                console.log('🗑️ Cleaning up old audio element')
                 audioRef.current.pause()
                 audioRef.current.src = ''
                 audioRef.current = null
@@ -437,9 +557,7 @@ export default function SermonsManagement() {
             // Now play the audio
             newAudio.play()
                 .then(() => {
-                    console.log('🎉 New audio started successfully')
                     setPlayingSermonId(sermonId)
-                    console.log('🏷️ Set playing sermon ID to:', sermonId)
                 })
                 .catch(e => {
                     console.error('💥 Error playing new audio:', e)
@@ -447,6 +565,37 @@ export default function SermonsManagement() {
                 })
         }
     }
+
+    // Filter and sort sermons
+    const filteredAndSortedSermons = sermons
+        .filter(sermon => {
+            if (!filterText) return true
+            const searchLower = filterText.toLowerCase()
+            return (
+                sermon.title.toLowerCase().includes(searchLower) ||
+                (sermon.preacher && sermon.preacher.toLowerCase().includes(searchLower)) ||
+                (sermon.description && sermon.description.toLowerCase().includes(searchLower))
+            )
+        })
+        .sort((a, b) => {
+            let comparison = 0
+
+            switch (sortBy) {
+                case 'date':
+                    comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+                    break
+                case 'title':
+                    comparison = a.title.localeCompare(b.title)
+                    break
+                case 'preacher':
+                    const aPreacher = a.preacher || ''
+                    const bPreacher = b.preacher || ''
+                    comparison = aPreacher.localeCompare(bPreacher)
+                    break
+            }
+
+            return sortOrder === 'asc' ? comparison : -comparison
+        })
 
     return (
         <div className="space-y-4 md:space-y-6">
@@ -519,33 +668,51 @@ export default function SermonsManagement() {
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="audio" className="text-sm md:text-base font-medium">Audio File *</Label>
+                                <Label htmlFor="audio" className="text-sm md:text-base font-medium">Audio Files *</Label>
                                 <div className="relative">
                                     <Input
                                         id="audio"
                                         type="file"
                                         onChange={handleFileChange}
-                                        accept="audio/*"
+                                        accept=".mp3,.wav,.m4a,.aac,.ogg,.flac,.webm,audio/mpeg,audio/mp3,audio/wav,audio/x-wav,audio/mp4,audio/m4a,audio/aac,audio/ogg,audio/webm,audio/flac"
+                                        multiple
                                         required
                                         className="text-sm md:text-base file:mr-4 file:py-2 file:px-4 file:rounded-sm file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground file:hover:bg-primary/90 file:cursor-pointer file:transition-colors"
                                     />
                                     <div className="mt-2 flex items-center gap-2">
                                         <Upload className="w-4 h-4 text-muted-foreground" />
                                         <p className="text-xs text-muted-foreground">
-                                            Select an audio file (mp3, wav, m4a, etc.)
+                                            Select one or more audio files (MP3, WAV, M4A, AAC, OGG, FLAC, WebM)
                                         </p>
                                     </div>
-                                    {formData.audio && (
-                                        <div className="mt-2 p-3 bg-muted/50 rounded-lg border">
-                                            <div className="flex items-center gap-2">
-                                                <Mic className="w-4 h-4 text-primary" />
-                                                <div>
-                                                    <p className="text-sm font-medium">{formData.audio.name}</p>
-                                                    <p className="text-xs text-muted-foreground">
-                                                        {formatFileSize(formData.audio.size)}
-                                                    </p>
+                                    {formData.audios.length > 0 && (
+                                        <div className="mt-2 space-y-2">
+                                            {formData.audios.map((file, index) => (
+                                                <div key={index} className="p-3 bg-muted/50 rounded-lg border">
+                                                    <div className="flex items-center gap-2">
+                                                        <Mic className="w-4 h-4 text-primary" />
+                                                        <div className="flex-1">
+                                                            <p className="text-sm font-medium">{file.name}</p>
+                                                            <p className="text-xs text-muted-foreground">
+                                                                {formatFileSize(file.size)}
+                                                            </p>
+                                                        </div>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setFormData({
+                                                                    ...formData,
+                                                                    audios: formData.audios.filter((_, i) => i !== index)
+                                                                })
+                                                            }}
+                                                            className="text-red-500 hover:text-red-700 p-1"
+                                                            title="Remove file"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
                                                 </div>
-                                            </div>
+                                            ))}
                                         </div>
                                     )}
                                 </div>
@@ -578,7 +745,7 @@ export default function SermonsManagement() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <Card className="p-4 glass-card border-2 border-primary/20">
                     <p className="text-muted-foreground text-sm">Total Sermons</p>
-                    <p className="text-3xl font-display font-bold text-foreground mt-2">{sermons.length}</p>
+                    <p className="text-3xl font-display font-bold text-foreground mt-2">{filteredAndSortedSermons.length}</p>
                 </Card>
                 <Card className="p-4 glass-card border-2 border-primary/20">
                     <p className="text-muted-foreground text-sm">This Week</p>
@@ -619,6 +786,57 @@ export default function SermonsManagement() {
                     </div>
                 ) : (
                     <>
+                        {/* Search, Sort, and Filter Controls */}
+                        <div className="flex flex-col sm:flex-row gap-4 mb-6 p-4 bg-muted/20 rounded-lg border">
+                            <div className="flex-1">
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                                    <Input
+                                        placeholder="Search sermons..."
+                                        value={filterText}
+                                        onChange={(e) => setFilterText(e.target.value)}
+                                        className="pl-10"
+                                    />
+                                </div>
+                            </div>
+                            <div className="flex gap-2">
+                                <select
+                                    value={sortBy}
+                                    onChange={(e) => setSortBy(e.target.value as 'date' | 'title' | 'preacher')}
+                                    className="px-3 py-2 border border-border rounded-md bg-background text-sm"
+                                >
+                                    <option value="date">Sort by Date</option>
+                                    <option value="title">Sort by Title</option>
+                                    <option value="preacher">Sort by Preacher</option>
+                                </select>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                                    className="px-3"
+                                >
+                                    {sortOrder === 'asc' ? <SortAsc className="w-4 h-4" /> : <SortDesc className="w-4 h-4" />}
+                                </Button>
+                                <div className="flex border border-border rounded-md">
+                                    <Button
+                                        variant={viewMode === 'list' ? 'default' : 'ghost'}
+                                        size="sm"
+                                        onClick={() => setViewMode('list')}
+                                        className="rounded-r-none"
+                                    >
+                                        <List className="w-4 h-4" />
+                                    </Button>
+                                    <Button
+                                        variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                                        size="sm"
+                                        onClick={() => setViewMode('grid')}
+                                        className="rounded-l-none"
+                                    >
+                                        <Grid className="w-4 h-4" />
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
                         {/* Desktop Table View */}
                         <div className="hidden md:block overflow-x-auto">
                             <table className="w-full">
@@ -631,7 +849,7 @@ export default function SermonsManagement() {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {sermons.map((sermon, index) => (
+                                    {filteredAndSortedSermons.map((sermon, index) => (
                                         <tr key={sermon.id || index} className="border-b border-border hover:bg-muted/50 transition-colors">
                                             <td className="px-4 py-4">
                                                 <div className="flex items-center gap-3">
@@ -654,20 +872,10 @@ export default function SermonsManagement() {
                                             <td className="px-4 py-4 text-sm text-muted-foreground">
                                                 {sermon.created_at ? new Date(sermon.created_at).toLocaleDateString() : 'N/A'}
                                             </td>
-                                            <td className="px-4 py-4 flex items-center justify-center gap-2">
-                                                {sermon.audio && (
-                                                    <>
-                                                        <button
-                                                            onClick={() => togglePlay(sermon.id!, sermon.audio!)}
-                                                            className="p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer"
-                                                            title={playingSermonId === sermon.id ? "Pause" : "Play"}
-                                                        >
-                                                            {playingSermonId === sermon.id ? (
-                                                                <Pause className="w-4 h-4 text-primary" />
-                                                            ) : (
-                                                                <Play className="w-4 h-4 text-primary" />
-                                                            )}
-                                                        </button>
+                                            <td className="px-4 py-4">
+                                                <div className="flex flex-col gap-3">
+                                                    {/* Sermon Actions */}
+                                                    <div className="flex items-center gap-2">
                                                         <button
                                                             onClick={() => playNextSermon(sermon.id!, true)}
                                                             className="p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer"
@@ -675,51 +883,166 @@ export default function SermonsManagement() {
                                                         >
                                                             <SkipForward className="w-4 h-4 text-primary" />
                                                         </button>
-                                                    </>
-                                                )}
-                                                <button
-                                                    onClick={() => handleViewSermon(sermon)}
-                                                    className="p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer"
-                                                    title="View details"
-                                                >
-                                                    <Info className="w-4 h-4 text-primary" />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleEditSermon(sermon)}
-                                                    className="p-2 hover:bg-blue-50 rounded-lg transition-colors"
-                                                    title="Edit sermon"
-                                                >
-                                                    <Edit className="w-4 h-4 text-blue-600" />
-                                                </button>
-                                                <AlertDialog>
-                                                    <AlertDialogTrigger asChild>
                                                         <button
-                                                            disabled={isDeleting}
-                                                            className="p-2 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
-                                                            title="Delete sermon"
+                                                            onClick={() => handleViewSermon(sermon)}
+                                                            className="p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer"
+                                                            title="View details"
                                                         >
-                                                            <Trash2 className="w-4 h-4 text-red-500" />
+                                                            <Info className="w-4 h-4 text-primary" />
                                                         </button>
-                                                    </AlertDialogTrigger>
-                                                    <AlertDialogContent>
-                                                        <AlertDialogHeader>
-                                                            <AlertDialogTitle>Delete Sermon</AlertDialogTitle>
-                                                            <AlertDialogDescription>
-                                                                Are you sure you want to delete "{sermon.title}"? This action cannot be undone and will permanently remove the sermon from the system.
-                                                            </AlertDialogDescription>
-                                                        </AlertDialogHeader>
-                                                        <AlertDialogFooter>
-                                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                            <AlertDialogAction
-                                                                onClick={() => handleDeleteSermon(sermon.id!)}
-                                                                className="bg-red-600 hover:bg-red-700"
-                                                                disabled={isDeleting}
-                                                            >
-                                                                {isDeleting ? "Deleting..." : "Delete Sermon"}
-                                                            </AlertDialogAction>
-                                                        </AlertDialogFooter>
-                                                    </AlertDialogContent>
-                                                </AlertDialog>
+                                                        <button
+                                                            onClick={() => handleEditSermon(sermon)}
+                                                            className="p-2 hover:bg-blue-50 rounded-lg transition-colors"
+                                                            title="Edit sermon"
+                                                        >
+                                                            <Edit className="w-4 h-4 text-blue-600" />
+                                                        </button>
+                                                        <AlertDialog>
+                                                            <AlertDialogTrigger asChild>
+                                                                <button
+                                                                    disabled={isDeleting}
+                                                                    className="p-2 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                                                                    title="Delete sermon"
+                                                                >
+                                                                    {isDeleting ? (
+                                                                        <Loader2 className="w-4 h-4 animate-spin text-red-500" />
+                                                                    ) : (
+                                                                        <Trash2 className="w-4 h-4 text-red-500" />
+                                                                    )}
+                                                                </button>
+                                                            </AlertDialogTrigger>
+                                                            <AlertDialogContent>
+                                                                <AlertDialogHeader>
+                                                                    <AlertDialogTitle>Delete Sermon</AlertDialogTitle>
+                                                                    <AlertDialogDescription>
+                                                                        Are you sure you want to delete "{sermon.title}"? This action cannot be undone and will permanently remove the sermon from the system.
+                                                                    </AlertDialogDescription>
+                                                                </AlertDialogHeader>
+                                                                {isDeleting && (
+                                                                    <div className="py-4">
+                                                                        <div className="flex items-center gap-3 mb-2">
+                                                                            <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                                                                            <p className="text-sm font-medium">Deleting sermon...</p>
+                                                                        </div>
+                                                                        <Progress value={75} className="w-full" />
+                                                                        <p className="text-xs text-muted-foreground mt-2">Please wait while we remove the sermon and all associated files from the server.</p>
+                                                                    </div>
+                                                                )}
+                                                                <AlertDialogFooter>
+                                                                    <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+                                                                    <AlertDialogAction
+                                                                        onClick={() => handleDeleteSermon(sermon.id!)}
+                                                                        className="bg-red-600 hover:bg-red-700"
+                                                                        disabled={isDeleting}
+                                                                    >
+                                                                        {isDeleting ? (
+                                                                            <>
+                                                                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                                                                Deleting...
+                                                                            </>
+                                                                        ) : (
+                                                                            "Delete Sermon"
+                                                                        )}
+                                                                    </AlertDialogAction>
+                                                                </AlertDialogFooter>
+                                                            </AlertDialogContent>
+                                                        </AlertDialog>
+                                                    </div>
+
+                                                    {/* Individual Audio Files */}
+                                                    {sermon.audios && sermon.audios.length > 0 && (
+                                                        <div className="space-y-2">
+                                                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Audio Files</p>
+                                                            <div className="space-y-1 max-w-xs">
+                                                                {sermon.audios.map((audioObj, index) => (
+                                                                    <div key={audioObj.id || index} className="flex items-center gap-2 p-2 bg-muted/30 rounded-md border">
+                                                                        <button
+                                                                            onClick={() => togglePlay(sermon.id!, audioObj.audio)}
+                                                                            className={`p-1.5 rounded-full transition-colors flex-shrink-0 ${
+                                                                                playingSermonId === sermon.id
+                                                                                    ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                                                                                    : 'hover:bg-primary/10 text-primary'
+                                                                            }`}
+                                                                            title={playingSermonId === sermon.id ? "Pause" : `Play ${getAudioFilename(audioObj.audio)}`}
+                                                                        >
+                                                                            {playingSermonId === sermon.id ? (
+                                                                                <Pause className="w-3 h-3" />
+                                                                            ) : (
+                                                                                <Play className="w-3 h-3" />
+                                                                            )}
+                                                                        </button>
+                                                                        <div className="flex-1 min-w-0">
+                                                                            <p className="text-xs font-medium text-foreground truncate">
+                                                                                {getAudioFilename(audioObj.audio)}
+                                                                            </p>
+                                                                        </div>
+                                                                        <a
+                                                                            href={audioObj.audio}
+                                                                            target="_blank"
+                                                                            rel="noopener noreferrer"
+                                                                            className="text-muted-foreground hover:text-primary p-1 rounded transition-colors flex-shrink-0"
+                                                                            title="Download/Open"
+                                                                        >
+                                                                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m-3 6V4a2 2 0 012-2h4a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V8a2 2 0 012-2h2" />
+                                                                            </svg>
+                                                                        </a>
+                                                                        <AlertDialog>
+                                                                            <AlertDialogTrigger asChild>
+                                                                                <button
+                                                                                    disabled={isDeletingAudio === audioObj.id}
+                                                                                    className="text-red-500 hover:text-red-700 p-1 rounded transition-colors flex-shrink-0"
+                                                                                    title="Delete audio file"
+                                                                                >
+                                                                                    {isDeletingAudio === audioObj.id ? (
+                                                                                        <Loader2 className="w-3 h-3 animate-spin" />
+                                                                                    ) : (
+                                                                                        <Trash2 className="w-3 h-3" />
+                                                                                    )}
+                                                                                </button>
+                                                                            </AlertDialogTrigger>
+                                                                            <AlertDialogContent>
+                                                                                <AlertDialogHeader>
+                                                                                    <AlertDialogTitle>Delete Audio File</AlertDialogTitle>
+                                                                                    <AlertDialogDescription>
+                                                                                        Are you sure you want to delete this audio file "{getAudioFilename(audioObj.audio)}"? This action cannot be undone.
+                                                                                    </AlertDialogDescription>
+                                                                                </AlertDialogHeader>
+                                                                                {isDeletingAudio === audioObj.id && (
+                                                                                    <div className="py-4">
+                                                                                        <div className="flex items-center gap-3 mb-2">
+                                                                                            <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                                                                                            <p className="text-sm font-medium">Deleting audio file...</p>
+                                                                                        </div>
+                                                                                        <Progress value={75} className="w-full" />
+                                                                                        <p className="text-xs text-muted-foreground mt-2">Please wait while we remove the file from the server.</p>
+                                                                                    </div>
+                                                                                )}
+                                                                                <AlertDialogFooter>
+                                                                                    <AlertDialogCancel disabled={isDeletingAudio === audioObj.id}>Cancel</AlertDialogCancel>
+                                                                                    <AlertDialogAction
+                                                                                        onClick={() => handleDeleteAudioFile(sermon.id!, audioObj.id)}
+                                                                                        className="bg-red-600 hover:bg-red-700"
+                                                                                        disabled={isDeletingAudio === audioObj.id}
+                                                                                    >
+                                                                                        {isDeletingAudio === audioObj.id ? (
+                                                                                            <>
+                                                                                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                                                                                Deleting...
+                                                                                            </>
+                                                                                        ) : (
+                                                                                            "Delete File"
+                                                                                        )}
+                                                                                    </AlertDialogAction>
+                                                                                </AlertDialogFooter>
+                                                                            </AlertDialogContent>
+                                                                        </AlertDialog>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </td>
                                         </tr>
                                     ))}
@@ -729,7 +1052,7 @@ export default function SermonsManagement() {
 
                         {/* Mobile Card View */}
                         <div className="md:hidden space-y-4">
-                            {sermons.map((sermon, index) => (
+                            {filteredAndSortedSermons.map((sermon, index) => (
                                 <Card key={sermon.id || index} className="p-4 glass-card border-2 border-primary/20">
                                     <div className="space-y-3">
                                         <div className="flex items-start justify-between">
@@ -745,10 +1068,10 @@ export default function SermonsManagement() {
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-1 flex-shrink-0">
-                                                {sermon.audio && (
+                                                {sermon.audios && sermon.audios.length > 0 && (
                                                     <>
                                                         <button
-                                                            onClick={() => togglePlay(sermon.id!, sermon.audio!)}
+                                                            onClick={() => togglePlay(sermon.id!, sermon.audios[0].audio)}
                                                             className="p-2 hover:bg-muted rounded-lg transition-colors"
                                                             title={playingSermonId === sermon.id ? "Pause" : "Play"}
                                                         >
@@ -788,7 +1111,11 @@ export default function SermonsManagement() {
                                                             className="p-2 hover:bg-red-50 rounded-lg transition-colors"
                                                             title="Delete sermon"
                                                         >
-                                                            <Trash2 className="w-4 h-4 text-red-500" />
+                                                            {isDeleting ? (
+                                                                <Loader2 className="w-4 h-4 animate-spin text-red-500" />
+                                                            ) : (
+                                                                <Trash2 className="w-4 h-4 text-red-500" />
+                                                            )}
                                                         </button>
                                                     </AlertDialogTrigger>
                                                     <AlertDialogContent>
@@ -798,14 +1125,31 @@ export default function SermonsManagement() {
                                                                 Are you sure you want to delete "{sermon.title}"? This action cannot be undone and will permanently remove the sermon from the system.
                                                             </AlertDialogDescription>
                                                         </AlertDialogHeader>
+                                                        {isDeleting && (
+                                                            <div className="py-4">
+                                                                <div className="flex items-center gap-3 mb-2">
+                                                                    <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                                                                    <p className="text-sm font-medium">Deleting sermon...</p>
+                                                                </div>
+                                                                <Progress value={75} className="w-full" />
+                                                                <p className="text-xs text-muted-foreground mt-2">Please wait while we remove the sermon and all associated files from the server.</p>
+                                                            </div>
+                                                        )}
                                                         <AlertDialogFooter>
-                                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
                                                             <AlertDialogAction
                                                                 onClick={() => handleDeleteSermon(sermon.id!)}
                                                                 className="bg-red-600 hover:bg-red-700"
                                                                 disabled={isDeleting}
                                                             >
-                                                                {isDeleting ? "Deleting..." : "Delete Sermon"}
+                                                                {isDeleting ? (
+                                                                    <>
+                                                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                                                        Deleting...
+                                                                    </>
+                                                                ) : (
+                                                                    "Delete Sermon"
+                                                                )}
                                                             </AlertDialogAction>
                                                         </AlertDialogFooter>
                                                     </AlertDialogContent>
@@ -818,6 +1162,100 @@ export default function SermonsManagement() {
                                                 <p className="text-sm text-muted-foreground">
                                                     {sermon.description.substring(0, 100)}...
                                                 </p>
+                                            </div>
+                                        )}
+
+                                        {/* Audio Files Section */}
+                                        {sermon.audios && sermon.audios.length > 0 && (
+                                            <div className="pt-2 border-t border-border space-y-2">
+                                                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Audio Files</p>
+                                                <div className="space-y-2">
+                                                    {sermon.audios.map((audioObj, index) => (
+                                                        <div key={audioObj.id || index} className="flex items-center gap-3 p-2 bg-muted/30 rounded-lg border">
+                                                            <button
+                                                                onClick={() => togglePlay(sermon.id!, audioObj.audio)}
+                                                                className={`p-2 rounded-full transition-colors flex-shrink-0 ${
+                                                                    playingSermonId === sermon.id
+                                                                        ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                                                                        : 'hover:bg-primary/10 text-primary'
+                                                                }`}
+                                                                title={playingSermonId === sermon.id ? "Pause" : `Play ${getAudioFilename(audioObj.audio)}`}
+                                                            >
+                                                                {playingSermonId === sermon.id ? (
+                                                                    <Pause className="w-4 h-4" />
+                                                                ) : (
+                                                                    <Play className="w-4 h-4" />
+                                                                )}
+                                                            </button>
+                                                            <div className="flex-1 min-w-0">
+                                                                <p className="text-sm font-medium text-foreground truncate">
+                                                                    {getAudioFilename(audioObj.audio)}
+                                                                </p>
+                                                            </div>
+                                                            <a
+                                                                href={audioObj.audio}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="text-muted-foreground hover:text-primary p-2 rounded-full hover:bg-primary/10 transition-colors flex-shrink-0"
+                                                                title="Download/Open"
+                                                            >
+                                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m-3 6V4a2 2 0 012-2h4a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V8a2 2 0 012-2h2" />
+                                                                </svg>
+                                                            </a>
+                                                            <AlertDialog>
+                                                                <AlertDialogTrigger asChild>
+                                                                    <button
+                                                                        disabled={isDeletingAudio === audioObj.id}
+                                                                        className="text-red-500 hover:text-red-700 p-2 rounded-full hover:bg-red-50 transition-colors flex-shrink-0"
+                                                                        title="Delete audio file"
+                                                                    >
+                                                                        {isDeletingAudio === audioObj.id ? (
+                                                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                                                        ) : (
+                                                                            <Trash2 className="w-4 h-4" />
+                                                                        )}
+                                                                    </button>
+                                                                </AlertDialogTrigger>
+                                                                <AlertDialogContent>
+                                                                    <AlertDialogHeader>
+                                                                        <AlertDialogTitle>Delete Audio File</AlertDialogTitle>
+                                                                        <AlertDialogDescription>
+                                                                            Are you sure you want to delete this audio file "{getAudioFilename(audioObj.audio)}"? This action cannot be undone.
+                                                                        </AlertDialogDescription>
+                                                                    </AlertDialogHeader>
+                                                                    {isDeletingAudio === audioObj.id && (
+                                                                        <div className="py-4">
+                                                                            <div className="flex items-center gap-3 mb-2">
+                                                                                <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                                                                                <p className="text-sm font-medium">Deleting audio file...</p>
+                                                                            </div>
+                                                                            <Progress value={75} className="w-full" />
+                                                                            <p className="text-xs text-muted-foreground mt-2">Please wait while we remove the file from the server.</p>
+                                                                        </div>
+                                                                    )}
+                                                                    <AlertDialogFooter>
+                                                                        <AlertDialogCancel disabled={isDeletingAudio === audioObj.id}>Cancel</AlertDialogCancel>
+                                                                        <AlertDialogAction
+                                                                            onClick={() => handleDeleteAudioFile(sermon.id!, audioObj.id)}
+                                                                            className="bg-red-600 hover:bg-red-700"
+                                                                            disabled={isDeletingAudio === audioObj.id}
+                                                                        >
+                                                                            {isDeletingAudio === audioObj.id ? (
+                                                                                <>
+                                                                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                                                                    Deleting...
+                                                                                </>
+                                                                            ) : (
+                                                                                "Delete File"
+                                                                            )}
+                                                                        </AlertDialogAction>
+                                                                    </AlertDialogFooter>
+                                                                </AlertDialogContent>
+                                                            </AlertDialog>
+                                                        </div>
+                                                    ))}
+                                                </div>
                                             </div>
                                         )}
 
@@ -864,37 +1302,69 @@ export default function SermonsManagement() {
                                             </div>
                                         )}
 
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                            <div className="space-y-2">
-                                                <Label className="text-sm font-semibold text-primary">Upload Date</Label>
-                                                <p className="text-base text-foreground">
-                                                    {selectedSermon.created_at ? new Date(selectedSermon.created_at).toLocaleDateString('en-US', {
-                                                        year: 'numeric',
-                                                        month: 'long',
-                                                        day: 'numeric'
-                                                    }) : 'N/A'}
-                                                </p>
-                                            </div>
-
-                                            <div className="space-y-2">
-                                                <Label className="text-sm font-semibold text-primary">Audio File</Label>
-                                                <p className="text-base text-foreground">
-                                                    {selectedSermon.audio ? 'Available' : 'Not available'}
-                                                </p>
-                                            </div>
+                                        <div className="space-y-2">
+                                            <Label className="text-sm font-semibold text-primary">Upload Date</Label>
+                                            <p className="text-base text-foreground">
+                                                {selectedSermon.created_at ? new Date(selectedSermon.created_at).toLocaleDateString('en-US', {
+                                                    year: 'numeric',
+                                                    month: 'long',
+                                                    day: 'numeric'
+                                                }) : 'N/A'}
+                                            </p>
                                         </div>
 
-                                        {selectedSermon.audio && (
-                                            <div className="pt-4 border-t border-border">
-                                                <Button
-                                                    onClick={() => {
-                                                        togglePlay(selectedSermon!.id, selectedSermon!.audio!)
-                                                        setIsViewDialogOpen(false)
-                                                    }}
-                                                    className="w-full sm:w-auto"
-                                                >
-                                                    {playingSermonId === selectedSermon!.id ? "Pause Sermon" : "Play Sermon"}
-                                                </Button>
+                                        {selectedSermon.audios && selectedSermon.audios.length > 0 && (
+                                            <div className="space-y-4">
+                                                <Label className="text-sm font-semibold text-primary">
+                                                    Audio Files ({selectedSermon.audios.length})
+                                                </Label>
+                                                <div className="space-y-3">
+                                                    {selectedSermon.audios.map((audioObj, index) => (
+                                                        <div key={audioObj.id || index} className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg border">
+                                                            <div className="flex-shrink-0">
+                                                                <button
+                                                                    onClick={() => togglePlay(selectedSermon!.id, audioObj.audio)}
+                                                                    className="p-2 hover:bg-primary/10 rounded-full transition-colors"
+                                                                    title={playingSermonId === selectedSermon!.id ? "Pause" : "Play"}
+                                                                >
+                                                                    {playingSermonId === selectedSermon!.id ? (
+                                                                        <Pause className="w-5 h-5 text-primary" />
+                                                                    ) : (
+                                                                        <Play className="w-5 h-5 text-primary" />
+                                                                    )}
+                                                                </button>
+                                                            </div>
+                                                            <div className="flex-1 min-w-0">
+                                                                <p className="text-sm font-medium text-foreground">
+                                                                    {getAudioFilename(audioObj.audio)}
+                                                                </p>
+                                                                <p className="text-xs text-muted-foreground">
+                                                                    Audio File {index + 1}
+                                                                </p>
+                                                            </div>
+                                                            <div className="flex-shrink-0">
+                                                                <a
+                                                                    href={audioObj.audio}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="text-primary hover:text-primary/80 p-2 rounded-full hover:bg-primary/10 transition-colors"
+                                                                    title="Download/Open in new tab"
+                                                                >
+                                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2v6m0-6l-2-2m2 2l2-2m0 6V4a2 2 0 012-2h4a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V8a2 2 0 012-2h2" />
+                                                                    </svg>
+                                                                </a>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {selectedSermon.audios && selectedSermon.audios.length === 0 && (
+                                            <div className="space-y-2">
+                                                <Label className="text-sm font-semibold text-primary">Audio Files</Label>
+                                                <p className="text-base text-muted-foreground">No audio files available</p>
                                             </div>
                                         )}
                                     </div>
@@ -940,20 +1410,7 @@ export default function SermonsManagement() {
                                             </p>
                                         </div>
 
-                                        <div className="space-y-3">
-                                            <Label htmlFor="edit-audio" className="text-base font-medium">Audio URL (optional)</Label>
-                                            <Input
-                                                id="edit-audio"
-                                                type="url"
-                                                value={editFormData.audio}
-                                                onChange={(e) => setEditFormData({ ...editFormData, audio: e.target.value })}
-                                                placeholder="https://example.com/audio.mp3"
-                                                className="text-base"
-                                            />
-                                            <p className="text-xs text-muted-foreground leading-relaxed">
-                                                Leave empty to keep current audio
-                                            </p>
-                                        </div>
+
                                     </div>
 
                                     <div className="space-y-3">
@@ -965,6 +1422,64 @@ export default function SermonsManagement() {
                                             placeholder="Brief description of the sermon..."
                                             className="text-base min-h-[120px] resize-none"
                                         />
+                                    </div>
+
+                                    <div className="space-y-3">
+                                        <Label className="text-base font-semibold">Add New Audio Files</Label>
+                                        <p className="text-sm text-muted-foreground">Upload additional audio files to this sermon</p>
+
+                                        <div>
+                                            <Label htmlFor="edit-audios" className="text-sm font-medium">Add Audio Files</Label>
+                                            <div className="mt-1">
+                                                <Input
+                                                    id="edit-audios"
+                                                    type="file"
+                                                    onChange={(e) => {
+                                                        const files = Array.from(e.target.files || [])
+                                                        setEditFormData({ ...editFormData, audios: files })
+                                                    }}
+                                                    accept=".mp3,.wav,.m4a,.aac,.ogg,.flac,.webm,audio/mpeg,audio/mp3,audio/wav,audio/x-wav,audio/mp4,audio/m4a,audio/aac,audio/ogg,audio/webm,audio/flac"
+                                                    multiple
+                                                    className="text-sm file:mr-4 file:py-2 file:px-4 file:rounded-sm file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground file:hover:bg-primary/90 file:cursor-pointer file:transition-colors"
+                                                />
+                                                <div className="mt-2 flex items-center gap-2">
+                                                    <Mic className="w-4 h-4 text-muted-foreground" />
+                                                    <p className="text-xs text-muted-foreground">
+                                                        Select additional audio files (MP3, WAV, M4A, AAC, OGG, FLAC, WebM)
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            {editFormData.audios.length > 0 && (
+                                                <div className="mt-2 space-y-2">
+                                                    {editFormData.audios.map((file, index) => (
+                                                        <div key={`new-audio-${index}`} className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                                                            <div className="flex items-center gap-2">
+                                                                <Mic className="w-4 h-4 text-green-600" />
+                                                                <div className="flex-1">
+                                                                    <p className="text-sm font-medium text-green-800">{file.name}</p>
+                                                                    <p className="text-xs text-green-600">
+                                                                        {formatFileSize(file.size)} - New file to upload
+                                                                    </p>
+                                                                </div>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        setEditFormData({
+                                                                            ...editFormData,
+                                                                            audios: editFormData.audios.filter((_, i) => i !== index)
+                                                                        })
+                                                                    }}
+                                                                    className="text-red-500 hover:text-red-700 p-1"
+                                                                    title="Remove audio"
+                                                                >
+                                                                    <Trash2 className="w-4 h-4" />
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
 
                                     <div className="pt-6 border-t border-border">

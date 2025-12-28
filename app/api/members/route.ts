@@ -29,8 +29,6 @@ export async function POST(request: NextRequest) {
         }
 
         // Forward the request to the external API
-        console.log('Sending to external API:', body);
-
         const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/members/`, {
             method: 'POST',
             headers: {
@@ -39,20 +37,16 @@ export async function POST(request: NextRequest) {
             body: JSON.stringify(body),
         });
 
-        console.log('External API response status:', response.status);
-
         let data;
         try {
             data = await response.json();
-            console.log('External API response data:', data);
         } catch (e) {
-            console.log('Failed to parse response as JSON');
             data = { error: 'Invalid response from external API' };
         }
 
         return NextResponse.json(data, { status: response.status });
     } catch (error) {
-        console.error('Registration error:', error);
+        
         return NextResponse.json(
             { error: 'Internal server error' },
             { status: 500 }
