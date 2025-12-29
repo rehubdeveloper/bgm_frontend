@@ -18,8 +18,6 @@ export async function GET(request: NextRequest) {
 
     try {
         // Forward the request to the external API admin panel endpoint
-        // Use Basic auth as expected by the backend API
-        const basicAuth = 'Basic YWRtaW5AZ21haWwuY29tOmFkbWlu'; // admin@gmail.com:admin
         const externalApiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/admin-panel/departments/`;
 
         const fetchStartTime = Date.now();
@@ -27,7 +25,7 @@ export async function GET(request: NextRequest) {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': basicAuth,
+                'Authorization': authHeader,
             },
         });
 
@@ -107,8 +105,6 @@ export async function POST(request: NextRequest) {
         
 
         // Forward the request to the external API admin panel endpoint
-        // Use Basic auth as expected by the backend API
-        const basicAuth = 'Basic YWRtaW5AZ21haWwuY29tOmFkbWlu'; // admin@gmail.com:admin
         const externalApiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/admin-panel/departments/`;
 
         const fetchStartTime = Date.now();
@@ -116,7 +112,7 @@ export async function POST(request: NextRequest) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': basicAuth,
+                'Authorization': authHeader,
             },
             body: JSON.stringify(body),
         });

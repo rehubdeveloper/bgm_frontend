@@ -80,14 +80,13 @@ export function useCachedData<T>(
     if (!force) {
       const cached = loadFromCache()
       if (cached && !cached.isStale) {
-        setState(prev => ({
-          ...prev,
+        setState({
           data: cached.data,
           timestamp: cached.timestamp,
           isLoading: false,
           error: null,
           isStale: false
-        }))
+        })
         return
       } else if (cached && cached.isStale) {
         // Set stale data but mark as stale
@@ -120,7 +119,7 @@ export function useCachedData<T>(
         error: error instanceof Error ? error.message : 'An error occurred'
       }))
     }
-  }, [enabled, loadFromCache, saveToCache, fetchFn])
+  }, [enabled, fetchFn]) // Simplified dependencies
 
   // Refresh data (force fetch)
   const refresh = useCallback(() => {
@@ -129,8 +128,10 @@ export function useCachedData<T>(
 
   // Initial load
   useEffect(() => {
-    fetchData()
-  }, [fetchData])
+    if (enabled) {
+      fetchData()
+    }
+  }, []) // Remove fetchData dependency to prevent infinite loops
 
   return {
     ...state,

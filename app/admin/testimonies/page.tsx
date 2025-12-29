@@ -48,6 +48,7 @@ export default function TestimoniesManagement() {
   const [loadingActions, setLoadingActions] = useState<Set<number>>(new Set())
   const [rejectReason, setRejectReason] = useState("")
 
+
   useEffect(() => {
     fetchTestimonies()
   }, [])
@@ -359,35 +360,35 @@ export default function TestimoniesManagement() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
-        <div>
-          <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-display font-bold text-foreground">Testimonies</h1>
-          <p className="text-muted-foreground text-xs sm:text-sm md:text-base">Review and manage member testimonies</p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+          <div>
+            <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-display font-bold text-foreground">Testimonies</h1>
+            <p className="text-muted-foreground text-xs sm:text-sm md:text-base">Review and manage member testimonies</p>
+          </div>
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button className="btn-primary flex items-center gap-2 w-full sm:w-auto">
+                <Plus className="w-4 h-4 md:w-5 md:h-5" />
+                <span className="hidden sm:inline">Add Testimony</span>
+                <span className="sm:hidden">Add</span>
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[500px] mx-4 max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle className="text-lg md:text-xl">Add New Testimony</DialogTitle>
+              </DialogHeader>
+
+              {submitError && (
+                <div className="flex items-center gap-2 text-red-700 bg-red-50 border border-red-200 rounded-lg p-3">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  <p className="text-sm">{submitError}</p>
+                </div>
+              )}
+
+              <TestimonyForm onError={setSubmitError} onSuccess={setSubmitSuccess} onSubmit={fetchTestimonies} />
+            </DialogContent>
+          </Dialog>
         </div>
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button className="btn-primary flex items-center gap-2 w-full sm:w-auto">
-              <Plus className="w-4 h-4 md:w-5 md:h-5" />
-              <span className="hidden sm:inline">Add Testimony</span>
-              <span className="sm:hidden">Add</span>
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px] mx-4 max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="text-lg md:text-xl">Add New Testimony</DialogTitle>
-            </DialogHeader>
-
-            {submitError && (
-              <div className="flex items-center gap-2 text-red-700 bg-red-50 border border-red-200 rounded-lg p-3">
-                <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                <p className="text-sm">{submitError}</p>
-              </div>
-            )}
-
-            <TestimonyForm onError={setSubmitError} onSuccess={setSubmitSuccess} onSubmit={fetchTestimonies} />
-          </DialogContent>
-        </Dialog>
-      </div>
 
       {/* Success/Error Messages */}
       {submitSuccess && (

@@ -264,13 +264,13 @@ export default function MembersManagement() {
             first_name: member.first_name,
             last_name: member.last_name,
             email: member.email,
-            phone: member.phone,
-            department: member.department.toString(),
-            date_of_birth: member.date_of_birth,
+            phone: member.phone || "",
+            department: member.department?.toString() || "",
+            date_of_birth: member.date_of_birth || "",
             marital_status: member.marital_status,
             gender: member.gender,
-            occupation: member.occupation,
-            address: member.address,
+            occupation: member.occupation || "",
+            address: member.address || "",
             password: "", // Don't populate password for security
         })
         setIsEditDialogOpen(true)
@@ -667,12 +667,12 @@ export default function MembersManagement() {
 
             {/* Members List - Responsive */}
             <Card className="p-4 md:p-6 glass-card border-2 border-primary/20">
-                {loading ? (
+                {isLoading ? (
                     <div className="flex items-center justify-center p-8">
                         <Loader2 className="w-8 h-8 animate-spin text-primary" />
                         <span className="ml-2 text-muted-foreground">Loading members...</span>
                     </div>
-                ) : members.length === 0 ? (
+                ) : !members || members.length === 0 ? (
                     <div className="text-center py-12">
                         <Users className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
                         <h3 className="text-lg font-medium text-foreground mb-2">No members yet</h3>

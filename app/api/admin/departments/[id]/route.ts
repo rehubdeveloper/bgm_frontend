@@ -19,8 +19,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     try {
         // Forward the request to the external API admin panel endpoint
-        // Use Basic auth as expected by the backend API
-        const basicAuth = 'Basic YWRtaW5AZ21haWwuY29tOmFkbWlu'; // admin@gmail.com:admin
         const externalApiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/admin-panel/departments/${departmentId}/`;
 
         const fetchStartTime = Date.now();
@@ -28,7 +26,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': basicAuth,
+                'Authorization': authHeader,
             },
         });
 
@@ -109,8 +107,6 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         
 
         // Forward the request to the external API admin panel endpoint
-        // Use Basic auth as expected by the backend API
-        const basicAuth = 'Basic YWRtaW5AZ21haWwuY29tOmFkbWlu'; // admin@gmail.com:admin
         const externalApiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/admin-panel/departments/${departmentId}/`;
 
         const fetchStartTime = Date.now();
@@ -118,7 +114,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': basicAuth,
+                'Authorization': authHeader,
             },
             body: JSON.stringify(body),
         });
@@ -199,8 +195,6 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         
 
         // Forward the request to the external API admin panel endpoint
-        // Use Basic auth as expected by the backend API
-        const basicAuth = 'Basic YWRtaW5AZ21haWwuY29tOmFkbWlu'; // admin@gmail.com:admin
         const externalApiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/admin-panel/departments/${departmentId}/`;
 
         const fetchStartTime = Date.now();
@@ -208,7 +202,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
             method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': basicAuth,
+                'Authorization': authHeader,
             },
             body: JSON.stringify(body),
         });
@@ -265,8 +259,6 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
 
     try {
         // Forward the request to the external API admin panel endpoint
-        // Use Basic auth as expected by the backend API
-        const basicAuth = 'Basic YWRtaW5AZ21haWwuY29tOmFkbWlu'; // admin@gmail.com:admin
         const externalApiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/admin-panel/departments/${departmentId}/`;
 
         const fetchStartTime = Date.now();
@@ -274,7 +266,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
             method: 'DELETE',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': basicAuth,
+                'Authorization': authHeader,
             },
         });
 

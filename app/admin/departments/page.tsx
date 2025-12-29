@@ -105,11 +105,14 @@ export default function DepartmentsManagement() {
         try {
             const token = localStorage.getItem('access_token')
             if (!token) {
-                console.error('No access token found')
+                console.error('❌ No access token found')
+                window.location.href = '/login'
                 return
             }
 
-            const response = await fetch('/api/admin/departments/', {
+            const apiUrl = '/api/admin/departments/'
+
+            const response = await fetch(apiUrl, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -122,10 +125,18 @@ export default function DepartmentsManagement() {
                 const departments = data.results || []
                 setDepartments(departments)
             } else {
-                console.error('Failed to fetch departments')
+                if (response.status === 401) {
+                    console.error('❌ Token expired or invalid, redirecting to login')
+                    localStorage.removeItem('access_token')
+                    window.location.href = '/login'
+                    return
+                }
+                console.error('❌ Failed to fetch departments:', response.status, response.statusText)
+                const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+                console.error('❌ Error details:', errorData)
             }
         } catch (error) {
-            console.error('Error fetching departments:', error)
+            console.error('💥 Error fetching departments:', error)
         } finally {
             setLoading(false)
         }

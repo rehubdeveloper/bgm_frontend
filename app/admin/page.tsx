@@ -91,7 +91,7 @@ export default function AdminDashboard() {
 
       const token = localStorage.getItem('access_token')
       if (!token) {
-        throw new Error('Authentication required')
+        throw new Error('Please log in to access the dashboard')
       }
 
       const response = await fetch('/api/admin/dashboard-stats', {
@@ -101,13 +101,31 @@ export default function AdminDashboard() {
       })
 
       if (!response.ok) {
-        throw new Error('Failed to fetch dashboard statistics')
+        if (response.status === 401) {
+          // Token expired or invalid - redirect to login
+          localStorage.removeItem('access_token')
+          window.location.href = '/login'
+          throw new Error('Authentication expired. Please log in again.')
+        } else if (response.status >= 500) {
+          throw new Error('Server error. The backend service may not be running.')
+        } else {
+          const errorData = await response.json().catch(() => ({}))
+          throw new Error(errorData.error || `Failed to fetch dashboard data (${response.status})`)
+        }
       }
 
       const data = await response.json()
       setStats(data)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred')
+      const errorMessage = err instanceof Error ? err.message : 'An error occurred while loading dashboard data'
+
+      // Check for network errors
+      if (err instanceof TypeError && err.message.includes('fetch')) {
+        setError('Unable to connect to the server. Please check your internet connection and try again.')
+      } else {
+        setError(errorMessage)
+      }
+
       console.error('Dashboard fetch error:', err)
     } finally {
       setLoading(false)
@@ -116,7 +134,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     fetchDashboardStats()
-  }, [])
+  }, []) // Empty dependency array to run only once on mount
 
   const statCards = stats ? [
     {
@@ -171,16 +189,23 @@ export default function AdminDashboard() {
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            Failed to load dashboard data: {error}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={fetchDashboardStats}
-              className="ml-4"
-            >
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Retry
-            </Button>
+            <div className="space-y-2">
+              <p>Failed to load dashboard data: {error}</p>
+              {error.includes('backend service may not be running') && (
+                <p className="text-sm">
+                  <strong>For Vercel deployment:</strong> Make sure to set the <code>NEXT_PUBLIC_API_BASE_URL</code> environment variable in your Vercel dashboard to point to your deployed backend API.
+                </p>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={fetchDashboardStats}
+                className="mt-2"
+              >
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Retry
+              </Button>
+            </div>
           </AlertDescription>
         </Alert>
       </div>
