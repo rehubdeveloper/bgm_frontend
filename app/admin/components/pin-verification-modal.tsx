@@ -19,15 +19,6 @@ export function PinVerificationModal({ isOpen, onClose, onSuccess }: PinVerifica
     const [isLoading, setIsLoading] = useState(false)
     const router = useRouter()
 
-    useEffect(() => {
-        const handleAuthChange = () => {
-            localStorage.removeItem('admin_authorized')
-            localStorage.removeItem('admin_auth_time')
-        }
-
-        window.addEventListener('auth-change', handleAuthChange)
-        return () => window.removeEventListener('auth-change', handleAuthChange)
-    }, [])
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -49,7 +40,6 @@ export function PinVerificationModal({ isOpen, onClose, onSuccess }: PinVerifica
                 localStorage.setItem('admin_authorized', 'true')
                 localStorage.setItem('admin_auth_time', Date.now().toString())
                 onSuccess()
-                onClose()
             } else {
                 toast.error(result.error || 'Invalid PIN')
                 setPin('')
